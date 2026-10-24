@@ -89,7 +89,7 @@ function AutoCardBadge({ number }: { number: string }) {
 
   return (
     <span className="flex items-center gap-1.5">
-      {brand && <CardBrandImage brand={brand} size={40} />}
+      {brand && <CardBrandImage brand={brand} size={56} />}
       {!brand && digits.length > 0 && <CreditCard size={22} className="text-[#9a8e83]" />}
       {isComplete && (valid
         ? <Check size={16} strokeWidth={3} className="text-[#159447]" />
@@ -165,7 +165,7 @@ function PaymentStep() {
       <div className="rounded-2xl border border-[#d1c4b5] bg-white p-6 shadow-sm sm:p-8">
         {/* Accepted payment methods */}
         <div className="mb-6 flex items-center justify-center px-2 py-3">
-          <PaymentLogosStrip height={52} />
+          <PaymentLogosStrip height={70} />
         </div>
 
         <div className="space-y-5">
