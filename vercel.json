@@ -1,14 +1,14 @@
 {
-  "buildCommand": "vite build && node build-api.mjs",
+  "buildCommand": "vite build",
   "outputDirectory": "dist/public",
   "framework": null,
   "functions": {
-    "api/index.mjs": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
+    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
