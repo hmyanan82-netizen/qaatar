@@ -5,7 +5,7 @@ await build({
   bundle: true,
   platform: "node",
   format: "esm",
-  outfile: "api/index.mjs",
+  outfile: "api/index.js",
   packages: "external",
   tsconfig: "tsconfig.json",
   alias: {
