@@ -41,9 +41,10 @@ function PaymentLogosStrip({ height = 48 }: { height?: number }) {
   return <img src="/images/payment-logos.jpg" alt="Visa, MasterCard, American Express, Himyan" style={{ height, objectFit: "contain" }} />;
 }
 function CardBrandImage({ brand, size = 40 }: { brand: "visa" | "mastercard" | "amex" | "mada"; size?: number }) {
-  const positions: Record<string, string> = { visa: "0% 50%", mastercard: "33% 50%", amex: "68% 50%", mada: "100% 50%" };
-  const widths: Record<string, string> = { visa: "400%", mastercard: "400%", amex: "400%", mada: "400%" };
-  return <div style={{ width: size, height: size * 0.7, backgroundImage: "url(/images/payment-logos.jpg)", backgroundSize: widths[brand], backgroundPosition: positions[brand], backgroundRepeat: "no-repeat", borderRadius: 4 }} />;
+  const offsets: Record<string, string> = { visa: "2%", mastercard: "34%", amex: "65%", mada: "96%" };
+  return <div style={{ width: size, height: size * 0.65, overflow: "hidden", borderRadius: 4, display: "flex", alignItems: "center" }}>
+    <img src="/images/payment-logos.jpg" alt={brand} style={{ height: "100%", width: "auto", objectFit: "cover", objectPosition: `${offsets[brand]} center`, transform: "scale(3.5)", transformOrigin: `${offsets[brand]} center` }} />
+  </div>;
 }
 
 function detectCardBrand(number: string): "visa" | "mastercard" | "mada" | "amex" | "" {
@@ -58,7 +59,7 @@ function detectCardBrand(number: string): "visa" | "mastercard" | "mada" | "amex
 
 function luhnCheck(number: string): boolean {
   const d = number.replace(/\s/g, "");
-  if (d.length < 13 || d.length > 19) return false;
+  if (d.length !== 16) return false;
   let sum = 0;
   let alt = false;
   for (let i = d.length - 1; i >= 0; i--) {
@@ -118,8 +119,8 @@ function PaymentStep() {
 
   const rawCard = card.replace(/\s/g, "");
   const detectedBrand = useMemo(() => detectCardBrand(card), [card]);
-  const cardValid = rawCard.length >= 13 && luhnCheck(card);
-  const cardComplete = rawCard.length >= 13;
+  const cardValid = rawCard.length === 16 && luhnCheck(card);
+  const cardComplete = rawCard.length === 16;
   const expiryValid = isExpiryValid(month, year);
   const expiryTouched = month !== "" && year !== "";
   const cvvValid = cvv.length === 3;
@@ -175,8 +176,8 @@ function PaymentStep() {
           <div>
             <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">رقم البطاقة</span>
             <span className="relative block">
-              <input required value={card} onChange={(e) => { setCard(cardNumber(e.target.value)); setError(""); }} placeholder="0000 0000 0000 0000" inputMode="numeric" maxLength={19} dir="ltr" className={`w-full rounded-xl border bg-white py-3.5 pr-4 pl-20 text-center text-[17px] tracking-[.18em] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] placeholder:tracking-[.18em] ${cardComplete ? (cardValid ? "border-[#159447] shadow-[0_0_0_3px_rgba(21,148,71,.1)]" : "border-[#c53030] shadow-[0_0_0_3px_rgba(197,48,48,.1)]") : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
-              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"><AutoCardBadge number={card} /></span>
+              <input required value={card} onChange={(e) => { setCard(cardNumber(e.target.value)); setError(""); }} placeholder="0000 0000 0000 0000" inputMode="numeric" maxLength={19} dir="ltr" className={`w-full rounded-xl border bg-white py-3.5 pl-4 pr-16 text-left text-[17px] tracking-[.18em] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] placeholder:tracking-[.18em] ${cardComplete ? (cardValid ? "border-[#159447] shadow-[0_0_0_3px_rgba(21,148,71,.1)]" : "border-[#c53030] shadow-[0_0_0_3px_rgba(197,48,48,.1)]") : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"><AutoCardBadge number={card} /></span>
             </span>
             {cardComplete && !cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#c53030]"><AlertCircle size={13} /> رقم البطاقة غير صحيح</p>}
             {cardComplete && cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#159447]"><Check size={13} strokeWidth={3} /> رقم البطاقة صحيح {detectedBrand === "visa" ? "— Visa" : detectedBrand === "mastercard" ? "— Mastercard" : detectedBrand === "amex" ? "— American Express" : detectedBrand === "mada" ? "— هميان" : ""}</p>}
