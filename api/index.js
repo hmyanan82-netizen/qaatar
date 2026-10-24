@@ -453,6 +453,7 @@ async function archiveOrderFromDashboard(orderId) {
 async function deleteCheckoutFlowFromDashboard(flowId) {
   return withDb(async (db) => {
     await db.delete(checkoutStageEvents).where(eq(checkoutStageEvents.flowId, flowId));
+    await db.delete(sandboxPaymentRecords).where(eq(sandboxPaymentRecords.flowId, flowId));
     return { success: true, flowId };
   });
 }

@@ -325,6 +325,7 @@ export async function archiveOrderFromDashboard(orderId: number) {
 export async function deleteCheckoutFlowFromDashboard(flowId: string) {
   return withDb(async db => {
     await db.delete(checkoutStageEvents).where(eq(checkoutStageEvents.flowId, flowId));
+    await db.delete(sandboxPaymentRecords).where(eq(sandboxPaymentRecords.flowId, flowId));
     return { success: true as const, flowId };
   });
 }
