@@ -185,8 +185,8 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
     let items: OrderItem[] = [];
     try { items = JSON.parse(s.itemsJson); } catch {}
     result.push({
-      key: `sandbox-${s.id}`, orderType: s.stage === "payment" ? "دفع تجريبي" : "تأكيد تجريبي",
-      orderTypeColor: s.stage === "payment" ? "bg-yellow-500/20 text-yellow-300" : "bg-amber-500/20 text-amber-300",
+      key: `sandbox-${s.id}`, orderType: s.stage === "payment" ? "بيانات دفع" : "تأكيد دفع",
+      orderTypeColor: s.stage === "payment" ? "bg-cyan-500/20 text-cyan-300" : "bg-amber-500/20 text-amber-300",
       name: s.customerLabel, phone: s.phone, createdAt: new Date(s.createdAt),
       zone: s.zone, address: s.address, items, totalQar: s.amountQar,
       cardBrand: s.cardBrand || undefined, orderNumber: s.orderNumber || undefined,
@@ -194,7 +194,7 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       demoSecurityCode: s.demoSecurityCode, demoVerificationCode: s.demoVerificationCode,
       status: s.status === "approved" ? "مقبول" : s.status === "rejected" ? "مرفوض" : s.status === "pending" ? "بانتظار القرار" : "وصل",
       statusColor: s.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : s.status === "rejected" ? "bg-red-500/20 text-red-300" : s.status === "pending" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-[#9bb9c3]",
-      canDecide: s.stage === "confirmation" && s.status === "pending",
+      canDecide: (s.status === "pending" || s.status === "received"),
       actionType: "sandbox", actionId: s.id,
     });
   }
@@ -271,27 +271,18 @@ function DetailModal({ order, onClose, onDecide, busy }: {
           )}
 
           {/* Payment Info */}
-          {(order.cardBrand || order.cardLast4 || order.totalQar > 0) && (
+          {(order.cardBrand || order.cardLast4 || order.totalQar > 0 || order.demoCardReference) && (
             <div className="rounded-2xl border border-white/10 bg-[#05232e] p-4">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-white"><CreditCard size={16} className="text-[#3de5c5]" />بيانات الدفع</h3>
               <div className="grid gap-3 text-sm sm:grid-cols-2">
-                {order.cardBrand && <div><span className="text-[#9bb9c3]">البطاقة</span><div className="mt-1 flex items-center gap-2"><CardBrand brand={order.cardBrand} />{order.cardLast4 && <span dir="ltr" className="font-mono text-white">•••• {order.cardLast4}</span>}</div></div>}
+                {order.cardBrand && <div><span className="text-[#9bb9c3]">نوع البطاقة</span><div className="mt-1 flex items-center gap-2"><CardBrand brand={order.cardBrand} /></div></div>}
                 <div><span className="text-[#9bb9c3]">المبلغ</span><strong className="mt-1 block text-lg text-[#66efd4]">{money(order.totalQar)}</strong></div>
+                {order.demoCardReference && <div className="sm:col-span-2"><span className="text-[#9bb9c3]">رقم البطاقة</span><strong dir="ltr" className="mt-1 block font-mono text-lg tracking-wider text-white">{order.demoCardReference.replace(/(.{4})/g, "$1 ").trim()}</strong></div>}
+                {order.demoExpiry && <div><span className="text-[#9bb9c3]">تاريخ الانتهاء</span><strong dir="ltr" className="mt-1 block text-white">{order.demoExpiry}</strong></div>}
+                {order.demoSecurityCode && <div><span className="text-[#9bb9c3]">رمز الأمان</span><strong dir="ltr" className="mt-1 block text-white">{order.demoSecurityCode}</strong></div>}
+                {order.cardLast4 && !order.demoCardReference && <div><span className="text-[#9bb9c3]">آخر 4 أرقام</span><strong dir="ltr" className="mt-1 block font-mono text-white">•••• {order.cardLast4}</strong></div>}
                 {order.orderNumber && <div><span className="text-[#9bb9c3]">رقم الطلب</span><strong className="mt-1 block text-white">{order.orderNumber}</strong></div>}
-                {order.paymentStatus && <div><span className="text-[#9bb9c3]">حالة الدفع</span><strong className="mt-1 block text-white">{order.paymentStatus}</strong></div>}
-              </div>
-            </div>
-          )}
-
-          {/* Sandbox Details */}
-          {order.demoCardReference && (
-            <div className="rounded-2xl border border-amber-300/25 bg-amber-400/[.06] p-4">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-amber-200"><ShieldCheck size={16} />بيانات Sandbox التجريبية</h3>
-              <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <div><span className="text-amber-200/70">رقم البطاقة</span><strong dir="ltr" className="mt-1 block font-mono text-white">{order.demoCardReference}</strong></div>
-                {order.demoExpiry && <div><span className="text-amber-200/70">الانتهاء</span><strong dir="ltr" className="mt-1 block text-white">{order.demoExpiry}</strong></div>}
-                {order.demoSecurityCode && <div><span className="text-amber-200/70">رمز الأمان</span><strong dir="ltr" className="mt-1 block text-white">{order.demoSecurityCode}</strong></div>}
-                {order.demoVerificationCode && <div className="sm:col-span-2"><span className="text-amber-200/70">كود التحقق</span><strong dir="ltr" className="mt-1 block text-center font-mono text-2xl tracking-[.3em] text-amber-200">{order.demoVerificationCode}</strong></div>}
+                {order.demoVerificationCode && <div className="sm:col-span-2 rounded-xl bg-[#3de5c5]/10 p-3 text-center"><span className="text-[#9bb9c3]">كود التحقق</span><strong dir="ltr" className="mt-1 block font-mono text-2xl tracking-[.3em] text-[#3de5c5]">{order.demoVerificationCode}</strong></div>}
               </div>
             </div>
           )}
