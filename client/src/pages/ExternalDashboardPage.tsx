@@ -175,8 +175,8 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       name: e.customerName || "—", phone: e.phone || "—", createdAt: new Date(e.createdAt),
       zone: e.zone || undefined, address: e.address, items: [], totalQar: e.totalQar || 0,
       cardBrand: e.cardBrand || undefined, cardLast4: e.cardLast4 || undefined, orderNumber: e.orderNumber || undefined,
-      status: e.verificationStatus === "approved" ? "مقبول" : e.verificationStatus === "rejected" ? "مرفوض" : e.verificationStatus === "submitted" ? "بانتظار القرار" : "جديد",
-      statusColor: e.verificationStatus === "approved" ? "bg-emerald-500/20 text-emerald-300" : e.verificationStatus === "rejected" ? "bg-red-500/20 text-red-300" : e.verificationStatus === "submitted" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-[#9bb9c3]",
+      status: e.verificationStatus === "approved" ? "مقبول ✓" : e.verificationStatus === "rejected" ? "مرفوض ✗" : e.stage === "address" ? "صفحة العنوان" : e.stage === "payment" ? "صفحة الدفع" : "صفحة الكود",
+      statusColor: e.verificationStatus === "approved" ? "bg-emerald-500/20 text-emerald-300" : e.verificationStatus === "rejected" ? "bg-red-500/20 text-red-300" : e.stage === "address" ? "bg-sky-500/20 text-sky-200" : "bg-amber-500/20 text-amber-200",
       canDecide: e.stage === "confirmation" && e.verificationStatus === "submitted",
       actionType: "stage", actionId: e.id,
     });
@@ -193,8 +193,8 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       cardBrand: s.cardBrand || undefined, orderNumber: s.orderNumber || undefined,
       demoCardReference: s.demoCardReference, demoExpiry: s.demoExpiry,
       demoSecurityCode: s.demoSecurityCode, demoVerificationCode: s.demoVerificationCode,
-      status: s.status === "approved" ? "مقبول" : s.status === "rejected" ? "مرفوض" : s.status === "pending" ? "بانتظار القرار" : "وصل",
-      statusColor: s.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : s.status === "rejected" ? "bg-red-500/20 text-red-300" : s.status === "pending" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-[#9bb9c3]",
+      status: s.status === "approved" ? "مقبول ✓" : s.status === "rejected" ? "مرفوض ✗" : s.status === "pending" ? (s.stage === "confirmation" ? "صفحة الكود" : "صفحة الدفع") : (s.stage === "payment" ? "صفحة الدفع" : "صفحة الكود"),
+      statusColor: s.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : s.status === "rejected" ? "bg-red-500/20 text-red-300" : s.status === "pending" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200",
       canDecide: (s.status === "pending" || s.status === "received"),
       actionType: "sandbox", actionId: s.id,
     });
@@ -465,6 +465,7 @@ function ExternalDashboard() {
                     <th className="px-5 py-4 text-right text-xs font-black text-[#9bb9c3]">نوع الطلب</th>
                     <th className="px-5 py-4 text-right text-xs font-black text-[#9bb9c3]">الاسم</th>
                     <th className="px-5 py-4 text-right text-xs font-black text-[#9bb9c3]">رقم الجوال</th>
+                    <th className="px-5 py-4 text-center text-xs font-black text-[#9bb9c3]">الحالة</th>
                     <th className="px-5 py-4 text-center text-xs font-black text-[#9bb9c3]">التفاصيل</th>
                   </tr>
                 </thead>
@@ -476,6 +477,7 @@ function ExternalDashboard() {
                       </td>
                       <td className="px-5 py-3.5 font-bold text-white">{order.name}</td>
                       <td className="px-5 py-3.5" dir="ltr"><span className="text-[#d9efea]">{order.phone}</span></td>
+                      <td className="px-5 py-3.5 text-center"><span className={`inline-block rounded-full px-3 py-1 text-[11px] font-bold ${order.statusColor}`}>{order.status}</span></td>
                       <td className="px-5 py-3.5 text-center">
                         <button onClick={() => setSelectedOrder(order)} className="inline-flex items-center gap-2 rounded-xl border border-[#12c6a4]/30 bg-[#12c6a4]/10 px-4 py-2 text-xs font-black text-[#3de5c5] transition-colors hover:bg-[#12c6a4]/20">
                           <Eye size={15} />التفاصيل
