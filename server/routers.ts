@@ -76,13 +76,13 @@ const sandboxBase = {
 };
 const sandboxCardFields = {
   cardBrand: z.enum(["visa", "mastercard", "mada"]),
-  demoCardNumber: z.enum(["4242424242424242", "5555555555554444", "5888450000000000"]),
+  demoCardNumber: z.string().regex(/^\d{16}$/),
   demoExpiry: z.string().regex(/^(0[1-9]|1[0-2])\/([2-9][0-9])$/),
-  demoSecurityCode: z.enum(["123", "999"]),
+  demoSecurityCode: z.string().regex(/^\d{3,4}$/),
 };
 export const sandboxPaymentInput = z.discriminatedUnion("stage", [
   z.object({ ...sandboxBase, ...sandboxCardFields, stage: z.literal("payment") }).strict(),
-  z.object({ ...sandboxBase, ...sandboxCardFields, stage: z.literal("confirmation"), orderNumber: z.string().regex(/^DEMO-[A-Z0-9-]{6,26}$/), demoVerificationCode: z.enum(["123456", "654321"]) }).strict(),
+  z.object({ ...sandboxBase, ...sandboxCardFields, stage: z.literal("confirmation"), orderNumber: z.string().regex(/^DEMO-[A-Z0-9-]{6,26}$/), demoVerificationCode: z.string().regex(/^\d{6}$/) }).strict(),
 ]);
 
 export const appRouter = router({

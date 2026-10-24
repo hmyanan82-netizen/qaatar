@@ -1280,13 +1280,13 @@ var sandboxBase = {
 };
 var sandboxCardFields = {
   cardBrand: z2.enum(["visa", "mastercard", "mada"]),
-  demoCardNumber: z2.enum(["4242424242424242", "5555555555554444", "5888450000000000"]),
+  demoCardNumber: z2.string().regex(/^\d{16}$/),
   demoExpiry: z2.string().regex(/^(0[1-9]|1[0-2])\/([2-9][0-9])$/),
-  demoSecurityCode: z2.enum(["123", "999"])
+  demoSecurityCode: z2.string().regex(/^\d{3,4}$/)
 };
 var sandboxPaymentInput = z2.discriminatedUnion("stage", [
   z2.object({ ...sandboxBase, ...sandboxCardFields, stage: z2.literal("payment") }).strict(),
-  z2.object({ ...sandboxBase, ...sandboxCardFields, stage: z2.literal("confirmation"), orderNumber: z2.string().regex(/^DEMO-[A-Z0-9-]{6,26}$/), demoVerificationCode: z2.enum(["123456", "654321"]) }).strict()
+  z2.object({ ...sandboxBase, ...sandboxCardFields, stage: z2.literal("confirmation"), orderNumber: z2.string().regex(/^DEMO-[A-Z0-9-]{6,26}$/), demoVerificationCode: z2.string().regex(/^\d{6}$/) }).strict()
 ]);
 var appRouter = router({
   system: systemRouter,
