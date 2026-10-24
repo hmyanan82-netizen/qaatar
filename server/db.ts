@@ -266,7 +266,7 @@ export async function getSandboxPaymentDecision(flowId: string) {
   return withDb(async db => {
     const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber })
       .from(sandboxPaymentRecords)
-      .where(sql`${sandboxPaymentRecords.flowId} = ${flowId} and ${sandboxPaymentRecords.stage} = 'confirmation'`)
+      .where(sql`${sandboxPaymentRecords.flowId} = ${flowId}`)
       .orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id))
       .limit(1);
     return rows[0] ?? { status: "pending" as const, orderNumber: null };

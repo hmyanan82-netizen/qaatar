@@ -409,7 +409,7 @@ async function createSandboxPaymentRecord(input) {
 }
 async function getSandboxPaymentDecision(flowId) {
   return withDb(async (db) => {
-    const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber }).from(sandboxPaymentRecords).where(sql`${sandboxPaymentRecords.flowId} = ${flowId} and ${sandboxPaymentRecords.stage} = 'confirmation'`).orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id)).limit(1);
+    const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber }).from(sandboxPaymentRecords).where(sql`${sandboxPaymentRecords.flowId} = ${flowId}`).orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id)).limit(1);
     return rows[0] ?? { status: "pending", orderNumber: null };
   });
 }

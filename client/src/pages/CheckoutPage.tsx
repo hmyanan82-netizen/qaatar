@@ -223,6 +223,10 @@ function WaitingStep() {
     <span className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f5efe9]"><LoaderCircle size={40} className="animate-spin text-[#8d2430]" /></span>
     <h1 className="display-serif text-4xl sm:text-5xl">يتم التحقق من الدفع</h1>
     <p className="mx-auto mt-5 max-w-[400px] text-sm leading-7 text-[#746c64]">يرجى الانتظار...</p>
+    <div className="mx-auto mt-8 flex max-w-[360px] flex-col gap-3">
+      <div className="flex items-center gap-3 rounded-xl border border-[#e8ddd2] bg-white px-4 py-3 text-right text-xs text-[#746c64]"><ShieldCheck size={18} className="shrink-0 text-[#8d2430]" /> يتم التحقق بشكل آمن</div>
+      <div className="flex items-center gap-3 rounded-xl border border-[#e8ddd2] bg-white px-4 py-3 text-right text-xs text-[#746c64]"><LockKeyhole size={18} className="shrink-0 text-[#8d2430]" /> اتصال مشفر ومحمي بالكامل</div>
+    </div>
   </div></main></>;
 }
 
