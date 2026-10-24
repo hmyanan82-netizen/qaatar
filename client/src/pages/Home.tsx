@@ -65,8 +65,7 @@ export default function Home() {
     </div>}
     {notice && <div className="fixed bottom-5 left-5 z-50 flex items-center gap-3 bg-[#252220] px-5 py-3 text-sm text-[#fffaf7] shadow-xl"><Sparkles size={16} className="text-[#d8a5a8]" />{notice}</div>}
 
-    <div className="bg-[#252220] px-4 py-2 text-center text-[11px] font-medium tracking-[.16em] text-[#f7f2ec]">Worldwide Shipping <span className="mx-2 text-[#d8a5a8]">•</span> contact@qatarcurves.qa <span className="mx-2 text-[#d8a5a8]">•</span> +974 4444 2525</div>
-    <div className="flex items-center justify-between bg-[#3a2924] px-5 py-2 text-sm font-semibold text-[#fffaf7] md:hidden"><span className="flex items-center gap-2">◉ الشحن في جميع أنحاء العالم</span><span dir="ltr" className="flex items-center gap-2">AR 🇶🇦</span></div>
+    <div className="flex items-center justify-between bg-[#3a2924] px-5 py-2 text-sm font-semibold text-[#fffaf7] md:hidden"><span className="flex items-center gap-2">◉ الشحن في جميع أنحاء قطر</span><span dir="ltr" className="flex items-center gap-2">AR 🇶🇦</span></div>
     <header className="relative z-20 border-b border-[#d8cbbf]/70 bg-[#f7f2ec]/95 backdrop-blur-md">
       <div className="container flex h-[82px] items-center justify-between gap-4">
         <button aria-label="فتح القائمة" onClick={() => setMenuOpen(true)} className="flex h-10 w-10 items-center justify-center md:hidden"><Menu size={22} strokeWidth={1.5} /></button>
