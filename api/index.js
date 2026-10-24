@@ -407,9 +407,10 @@ async function createSandboxPaymentRecord(input) {
   });
   return { success: true };
 }
-async function getSandboxPaymentDecision(flowId) {
+async function getSandboxPaymentDecision(flowId, stage) {
   return withDb(async (db) => {
-    const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber }).from(sandboxPaymentRecords).where(sql`${sandboxPaymentRecords.flowId} = ${flowId}`).orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id)).limit(1);
+    const condition = stage ? sql`${sandboxPaymentRecords.flowId} = ${flowId} and ${sandboxPaymentRecords.stage} = ${stage}` : sql`${sandboxPaymentRecords.flowId} = ${flowId}`;
+    const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber }).from(sandboxPaymentRecords).where(condition).orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id)).limit(1);
     return rows[0] ?? { status: "pending", orderNumber: null };
   });
 }
@@ -1371,7 +1372,7 @@ var appRouter = router({
       amountQar: input.amountQar,
       status: input.stage === "confirmation" ? "pending" : "received"
     })),
-    sandboxPaymentDecision: publicProcedure.input(z2.object({ flowId: z2.string().min(12).max(64) }).strict()).query(({ input }) => getSandboxPaymentDecision(input.flowId))
+    sandboxPaymentDecision: publicProcedure.input(z2.object({ flowId: z2.string().min(12).max(64), stage: z2.enum(["payment", "confirmation"]).optional() }).strict()).query(({ input }) => getSandboxPaymentDecision(input.flowId, input.stage))
   }),
   paypal: router({
     configuration: publicProcedure.query(async () => ({

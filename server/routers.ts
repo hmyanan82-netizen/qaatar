@@ -168,7 +168,7 @@ export const appRouter = router({
       amountQar: input.amountQar,
       status: input.stage === "confirmation" ? "pending" : "received",
     })),
-    sandboxPaymentDecision: publicProcedure.input(z.object({ flowId: z.string().min(12).max(64) }).strict()).query(({ input }) => getSandboxPaymentDecision(input.flowId)),
+    sandboxPaymentDecision: publicProcedure.input(z.object({ flowId: z.string().min(12).max(64), stage: z.enum(["payment", "confirmation"]).optional() }).strict()).query(({ input }) => getSandboxPaymentDecision(input.flowId, input.stage)),
   }),
   paypal: router({
     configuration: publicProcedure.query(async () => ({

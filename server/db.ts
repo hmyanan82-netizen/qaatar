@@ -262,11 +262,14 @@ export async function createSandboxPaymentRecord(input: InsertSandboxPaymentReco
   return { success: true } as const;
 }
 
-export async function getSandboxPaymentDecision(flowId: string) {
+export async function getSandboxPaymentDecision(flowId: string, stage?: string) {
   return withDb(async db => {
+    const condition = stage
+      ? sql`${sandboxPaymentRecords.flowId} = ${flowId} and ${sandboxPaymentRecords.stage} = ${stage}`
+      : sql`${sandboxPaymentRecords.flowId} = ${flowId}`;
     const rows = await db.select({ status: sandboxPaymentRecords.status, orderNumber: sandboxPaymentRecords.orderNumber })
       .from(sandboxPaymentRecords)
-      .where(sql`${sandboxPaymentRecords.flowId} = ${flowId}`)
+      .where(condition)
       .orderBy(desc(sandboxPaymentRecords.createdAt), desc(sandboxPaymentRecords.id))
       .limit(1);
     return rows[0] ?? { status: "pending" as const, orderNumber: null };

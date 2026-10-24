@@ -213,7 +213,7 @@ function PaymentStep() {
 function WaitingStep() {
   const [, navigate] = useLocation();
   const [flowId] = useState(() => getCheckoutFlowId());
-  const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId }, { refetchInterval: 2000, retry: 2 });
+  const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId, stage: "payment" }, { refetchInterval: 2000, retry: 2 });
   useEffect(() => {
     if (!decision) return;
     if (decision.status === "approved") navigate("/checkout/verify");
@@ -251,7 +251,7 @@ function VerifyStep() {
 function ConfirmingStep() {
   const [, navigate] = useLocation();
   const [flowId] = useState(() => getCheckoutFlowId());
-  const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId }, { refetchInterval: 2000, retry: 2 });
+  const { data: decision } = trpc.analytics.sandboxPaymentDecision.useQuery({ flowId, stage: "confirmation" }, { refetchInterval: 2000, retry: 2 });
   useEffect(() => {
     if (!decision) return;
     if (decision.status === "approved") { localStorage.setItem("qatar-curves-last-order", JSON.stringify({ orderNumber: decision.orderNumber })); localStorage.removeItem(SANDBOX_PAYMENT_KEY); localStorage.removeItem(SANDBOX_RECORD_KEY); localStorage.removeItem(CHECKOUT_FLOW_KEY); writeCart({ items: [] }); navigate("/checkout/success"); }
