@@ -125,7 +125,12 @@ function LoginGate() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const login = trpc.auth.loginWithPassword.useMutation({
-    onSuccess: () => window.location.reload(),
+    onSuccess: (data) => {
+      if (data.token && data.cookieName) {
+        try { sessionStorage.setItem("manus-cookie", `${data.cookieName}=${data.token}`); } catch {}
+      }
+      window.location.reload();
+    },
     onError: (err) => setError(err.message || "كلمة المرور غير صحيحة"),
   });
   return <main dir="rtl" className="grid min-h-screen place-items-center bg-[#031d27] p-5">

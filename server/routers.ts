@@ -98,7 +98,7 @@ export const appRouter = router({
       const token = await sdk.createSessionToken(openId, { name: "Admin", expiresInMs: ONE_YEAR_MS });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      return { success: true as const };
+      return { success: true as const, token, cookieName: COOKIE_NAME };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
