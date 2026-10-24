@@ -21,6 +21,7 @@ import {
   UsersRound,
   Volume2,
   VolumeX,
+  Wifi,
   X,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -369,7 +370,7 @@ function ExternalDashboard() {
   const busy = decide.isPending || decideSandbox.isPending;
 
   const { data, error, refetch, isFetching } = trpc.admin.dashboard.useQuery(undefined, {
-    enabled: !loading && user?.role === "admin", refetchInterval: 4000, retry: 2,
+    enabled: !loading && user?.role === "admin", refetchInterval: 3000, retry: 2,
   });
 
   const orders = (data?.recentOrders ?? []) as SafeOrder[];
@@ -426,7 +427,7 @@ function ExternalDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => void refetch()} className="grid size-10 place-items-center rounded-xl bg-white/5 text-[#d9efea] hover:bg-white/10" title="تحديث"><RefreshCw size={17} className={isFetching ? "animate-spin" : ""} /></button>
-            <span className="flex h-10 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 text-emerald-200" title="الموجودون في الموقع"><UsersRound size={16} /><strong className="text-sm tabular-nums">{online}</strong></span>
+            <span className="flex h-10 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 text-emerald-200" title="الزيارات النشطة"><Wifi size={16} /><strong className="text-sm tabular-nums">{online}</strong><span className="hidden text-xs font-bold sm:inline">نشط</span></span>
             {pendingCount > 0 && <span className="flex h-10 items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 text-amber-200"><strong className="text-sm tabular-nums">{pendingCount}</strong><span className="hidden text-xs font-bold sm:inline">بانتظار القرار</span></span>}
             <button onClick={() => { const next = !sound; setSound(next); window.localStorage.setItem(DASHBOARD_SOUND_KEY, next ? "on" : "off"); if (next) void playOrderAlert(); }} className={`grid size-10 place-items-center rounded-xl ${sound ? "bg-[#12c6a4] text-[#03242d]" : "bg-white/5 text-[#d9efea]"}`} title={sound ? "إيقاف الصوت" : "تشغيل الصوت"}>{sound ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
             <button onClick={() => window.open("/", "_blank")} className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-[#d9efea] hover:bg-white/10 sm:flex"><Store size={16} />المتجر<ExternalLink size={14} /></button>
