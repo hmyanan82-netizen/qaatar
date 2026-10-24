@@ -38,20 +38,42 @@ function Field({ label, placeholder, value, onChange, type = "text", autoComplet
 }
 
 function VisaLogo({ size = 48 }: { size?: number }) {
-  const h = size * 0.6;
-  return <svg width={size} height={h} viewBox="0 0 80 48" fill="none"><rect width="80" height="48" rx="4" fill="#1a1f71" stroke="#141a5e" strokeWidth="1"/><rect y="38" width="80" height="6" fill="#f7a600"/><text x="40" y="30" textAnchor="middle" fill="white" fontSize="22" fontWeight="900" fontStyle="italic" fontFamily="Arial, sans-serif">VISA</text></svg>;
+  const h = size * 0.65;
+  return <svg width={size} height={h} viewBox="0 0 120 78" fill="none">
+    <rect x="2" y="2" width="116" height="74" rx="4" fill="#fff" stroke="#1a1f71" strokeWidth="4"/>
+    <rect x="2" y="58" width="116" height="16" rx="0" fill="#f7a600"/>
+    <rect x="2" y="72" width="116" height="4" rx="0" fill="#f7a600"/>
+    <text x="60" y="48" textAnchor="middle" fill="#1a1f71" fontSize="36" fontWeight="900" fontStyle="italic" fontFamily="Arial, Helvetica, sans-serif">VISA</text>
+  </svg>;
 }
 function MastercardLogo({ size = 48 }: { size?: number }) {
-  const h = size * 0.7;
-  return <svg width={size} height={h} viewBox="0 0 72 50" fill="none"><circle cx="26" cy="25" r="20" fill="#eb001b"/><circle cx="46" cy="25" r="20" fill="#f79e1b"/><path d="M36 9.2a20 20 0 0 1 0 31.6 20 20 0 0 1 0-31.6Z" fill="#ff5f00"/></svg>;
+  const h = size * 0.75;
+  return <svg width={size} height={h} viewBox="0 0 80 60" fill="none">
+    <circle cx="28" cy="26" r="22" fill="#eb001b"/>
+    <circle cx="52" cy="26" r="22" fill="#f7a600" opacity="0.9"/>
+    <path d="M40 7.5a22 22 0 0 1 0 37 22 22 0 0 1 0-37Z" fill="#ff5f00"/>
+    <text x="40" y="56" textAnchor="middle" fill="#1a1a1a" fontSize="7.5" fontWeight="800" fontFamily="Arial, Helvetica, sans-serif" letterSpacing="0.5"><tspan fill="#1a1a1a">Master</tspan><tspan fill="#1a1a1a" fontWeight="400">Card</tspan></text>
+  </svg>;
 }
 function AmexLogo({ size = 48 }: { size?: number }) {
   const h = size * 0.6;
-  return <svg width={size} height={h} viewBox="0 0 80 48" fill="none"><rect width="80" height="48" rx="4" fill="#016fd0"/><text x="40" y="22" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" fontFamily="Arial, sans-serif">AMERICAN</text><text x="40" y="36" textAnchor="middle" fill="white" fontSize="12" fontWeight="900" fontFamily="Arial, sans-serif">EXPRESS</text></svg>;
+  return <svg width={size} height={h} viewBox="0 0 100 60" fill="none">
+    <rect width="100" height="60" rx="5" fill="#016fd0"/>
+    <text x="50" y="28" textAnchor="middle" fill="white" fontSize="14" fontWeight="900" fontFamily="Arial, Helvetica, sans-serif" letterSpacing="1.5">AMERICAN</text>
+    <text x="50" y="46" textAnchor="middle" fill="white" fontSize="16" fontWeight="900" fontFamily="Arial, Helvetica, sans-serif" letterSpacing="2">EXPRESS</text>
+  </svg>;
 }
 function HimyanLogo({ size = 48 }: { size?: number }) {
-  const h = size * 0.6;
-  return <svg width={size} height={h} viewBox="0 0 90 54" fill="none"><text x="52" y="22" textAnchor="middle" fill="#1a1a1a" fontSize="16" fontWeight="900" fontFamily="Arial, sans-serif">هميان</text><text x="52" y="38" textAnchor="middle" fill="#1a1a1a" fontSize="9" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="2">HIMYAN</text><path d="M12 10 L26 27 L12 27 Z" fill="#8d1b3d"/><path d="M16 10 L30 27 L16 27 Z" fill="#b0223f" opacity="0.7"/></svg>;
+  const h = size * 0.7;
+  return <svg width={size} height={h} viewBox="0 0 110 77" fill="none">
+    <text x="62" y="32" textAnchor="middle" fill="#1a1a1a" fontSize="26" fontWeight="900" fontFamily="Arial, Tahoma, sans-serif" direction="rtl">هميان</text>
+    <text x="62" y="52" textAnchor="middle" fill="#1a1a1a" fontSize="12" fontWeight="800" fontFamily="Arial, Helvetica, sans-serif" letterSpacing="3">HIMYAN</text>
+    <g transform="translate(2, 8)">
+      <polygon points="0,32 18,0 18,32" fill="#8d1b3d"/>
+      <polygon points="6,32 24,0 24,32" fill="#a52040" opacity="0.75"/>
+      <polygon points="11,32 29,0 29,32" fill="#c4284a" opacity="0.5"/>
+    </g>
+  </svg>;
 }
 
 function detectCardBrand(number: string): "visa" | "mastercard" | "mada" | "amex" | "" {
