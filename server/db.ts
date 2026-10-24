@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, ne, sql } from "drizzle-orm";
-import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
-import { createPool } from "mysql2/promise";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { checkoutStageEvents, customerRegistrations, InsertCheckoutStageEvent, InsertCustomerRegistration, InsertOrder, InsertPaypalPayment, InsertSandboxPaymentRecord, orders, paypalPayments, sandboxPaymentRecords, users, visitorSessions } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import type { InsertUser } from "../drizzle/schema";
@@ -8,25 +8,30 @@ import { isVisitorOnline, VISITOR_ONLINE_WINDOW_MS } from "../shared/visitorPres
 
 const DB_OPERATION_TIMEOUT_MS = 10_000;
 
-async function withDb<T>(operation: (db: MySql2Database) => Promise<T>, attempts = 3): Promise<T> {
+let pool: pg.Pool | null = null;
+
+function getPool(): pg.Pool {
+  if (!pool) {
+    pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 5,
+      idleTimeoutMillis: 15_000,
+      connectionTimeoutMillis: 10_000,
+      ssl: { rejectUnauthorized: false },
+    });
+  }
+  return pool;
+}
+
+async function withDb<T>(operation: (db: NodePgDatabase) => Promise<T>, attempts = 3): Promise<T> {
   if (!process.env.DATABASE_URL) throw new Error("Database unavailable");
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const pool = createPool({
-      uri: process.env.DATABASE_URL,
-      waitForConnections: true,
-      connectionLimit: 1,
-      maxIdle: 1,
-      idleTimeout: 15_000,
-      queueLimit: 10,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-      connectTimeout: 10_000,
-    });
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
+      const db = drizzle(getPool());
       return await Promise.race([
-        operation(drizzle(pool)),
+        operation(db),
         new Promise<T>((_, reject) => { timeout = setTimeout(() => reject(new Error("Database operation timeout")), DB_OPERATION_TIMEOUT_MS); }),
       ]);
     } catch (error) {
@@ -34,7 +39,6 @@ async function withDb<T>(operation: (db: MySql2Database) => Promise<T>, attempts
       if (attempt < attempts - 1) await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
     } finally {
       if (timeout) clearTimeout(timeout);
-      void pool.end().catch(() => undefined);
     }
   }
   throw lastError;
@@ -65,7 +69,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
   values.lastSignedIn ??= new Date();
   updateSet.lastSignedIn ??= new Date();
-  await withDb(async db => { await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet }); });
+  await withDb(async db => {
+    await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
+  });
 }
 
 export async function getUserByOpenId(openId: string) {
@@ -84,7 +90,8 @@ export async function upsertVisitorSession(input: { sessionKey: string; currentP
       currentPath: input.currentPath,
       userAgent: input.userAgent?.slice(0, 512),
       isActive: 1,
-    }).onDuplicateKeyUpdate({
+    }).onConflictDoUpdate({
+      target: visitorSessions.sessionKey,
       set: {
         currentPath: input.currentPath,
         userAgent: input.userAgent?.slice(0, 512),
@@ -107,10 +114,8 @@ export async function markVisitorSessionOffline(sessionKey: string) {
 export async function createCustomerRegistration(input: InsertCustomerRegistration) {
   if (!process.env.DATABASE_URL) return undefined;
   return withDb(async db => {
-    const result = await db.insert(customerRegistrations).values(input);
-    const id = Number(result[0].insertId);
-    const rows = await db.select().from(customerRegistrations).where(eq(customerRegistrations.id, id)).limit(1);
-    return rows[0];
+    const result = await db.insert(customerRegistrations).values(input).returning();
+    return result[0];
   }, 1);
 }
 
@@ -118,14 +123,15 @@ export async function createSafeOrder(input: Omit<InsertOrder, "orderNumber">, c
   const suffix = clientRequestId?.replace(/[^a-zA-Z0-9]/g, "").slice(0, 18).toUpperCase();
   const orderNumber = suffix ? `QC-${suffix}` : `QC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   await withDb(async db => {
-    await db.insert(orders).values({ ...input, orderNumber }).onDuplicateKeyUpdate({ set: { orderNumber } });
+    await db.insert(orders).values({ ...input, orderNumber }).onConflictDoUpdate({ target: orders.orderNumber, set: { orderNumber } });
   });
   return { orderNumber };
 }
 
 export async function upsertPaypalPayment(input: InsertPaypalPayment) {
   return withDb(async db => {
-    await db.insert(paypalPayments).values(input).onDuplicateKeyUpdate({
+    const result = await db.insert(paypalPayments).values(input).onConflictDoUpdate({
+      target: paypalPayments.clientRequestId,
       set: {
         paypalOrderId: input.paypalOrderId,
         customerName: input.customerName,
@@ -139,10 +145,9 @@ export async function upsertPaypalPayment(input: InsertPaypalPayment) {
         paymentSource: input.paymentSource,
         status: input.status,
       },
-    });
-    const rows = await db.select().from(paypalPayments).where(eq(paypalPayments.clientRequestId, input.clientRequestId)).limit(1);
-    if (!rows[0]) throw new Error("PayPal payment record was not created");
-    return rows[0];
+    }).returning();
+    if (!result[0]) throw new Error("PayPal payment record was not created");
+    return result[0];
   });
 }
 
@@ -160,15 +165,15 @@ export async function completePaypalPayment(input: {
   cardBrand?: string;
   cardLast4?: string;
 }) {
-  return withDb(async db => db.transaction(async tx => {
-    const rows = await tx.select().from(paypalPayments).where(eq(paypalPayments.paypalOrderId, input.paypalOrderId)).limit(1);
+  return withDb(async db => {
+    const rows = await db.select().from(paypalPayments).where(eq(paypalPayments.paypalOrderId, input.paypalOrderId)).limit(1);
     const payment = rows[0];
     if (!payment) throw new Error("PayPal payment record not found");
 
     const suffix = input.paypalCaptureId.replace(/[^a-zA-Z0-9]/g, "").slice(-18).toUpperCase();
     const orderNumber = payment.orderNumber ?? `QC-${suffix}`;
 
-    await tx.insert(orders).values({
+    await db.insert(orders).values({
       orderNumber,
       customerName: payment.customerName,
       phone: payment.phone,
@@ -182,14 +187,12 @@ export async function completePaypalPayment(input: {
       cardLast4: /^\d{4}$/.test(input.cardLast4 || "") ? input.cardLast4! : "----",
       paymentStatus: "verified",
       orderStatus: "new",
-    }).onDuplicateKeyUpdate({
-      set: {
-        paymentStatus: "verified",
-        orderStatus: "new",
-      },
+    }).onConflictDoUpdate({
+      target: orders.orderNumber,
+      set: { paymentStatus: "verified", orderStatus: "new" },
     });
 
-    await tx.update(paypalPayments).set({
+    await db.update(paypalPayments).set({
       paypalCaptureId: input.paypalCaptureId,
       orderNumber,
       paymentSource: input.paymentSource,
@@ -197,7 +200,7 @@ export async function completePaypalPayment(input: {
     }).where(eq(paypalPayments.paypalOrderId, input.paypalOrderId));
 
     return { orderNumber, totalQar: payment.totalQar };
-  }));
+  });
 }
 
 export async function updatePaypalPaymentStatus(paypalOrderId: string, status: "approved" | "cancelled" | "failed") {
@@ -209,7 +212,8 @@ export async function updatePaypalPaymentStatus(paypalOrderId: string, status: "
 
 export async function createCheckoutStageEvent(input: InsertCheckoutStageEvent) {
   await withDb(async db => {
-    await db.insert(checkoutStageEvents).values(input).onDuplicateKeyUpdate({
+    await db.insert(checkoutStageEvents).values(input).onConflictDoUpdate({
+      target: checkoutStageEvents.eventKey,
       set: {
         customerName: input.customerName,
         phone: input.phone,
@@ -228,7 +232,8 @@ export async function createCheckoutStageEvent(input: InsertCheckoutStageEvent) 
 
 export async function createSandboxPaymentRecord(input: InsertSandboxPaymentRecord) {
   await withDb(async db => {
-    await db.insert(sandboxPaymentRecords).values(input).onDuplicateKeyUpdate({
+    await db.insert(sandboxPaymentRecords).values(input).onConflictDoUpdate({
+      target: sandboxPaymentRecords.recordKey,
       set: {
         flowId: input.flowId,
         stage: input.stage,
