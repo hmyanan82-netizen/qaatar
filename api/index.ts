@@ -1,30 +1,49 @@
 import "dotenv/config";
-import express from "express";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "../server/_core/oauth";
-import { registerStorageProxy } from "../server/_core/storageProxy";
-import { appRouter } from "../server/routers";
-import { createContext } from "../server/_core/context";
 
-const app = express();
+let app: any;
+let initError: Error | null = null;
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+try {
+  const express = await import("express");
+  const { createExpressMiddleware } = await import("@trpc/server/adapters/express");
+  const { registerOAuthRoutes } = await import("../server/_core/oauth");
+  const { registerStorageProxy } = await import("../server/_core/storageProxy");
+  const { appRouter } = await import("../server/routers");
+  const { createContext } = await import("../server/_core/context");
 
-app.use("/.well-known/apple-developer-merchantid-domain-association", (_req, res, next) => {
-  res.setHeader("Content-Type", "application/octet-stream");
-  next();
-});
+  app = express.default();
 
-registerStorageProxy(app);
-registerOAuthRoutes(app);
+  app.use(express.default.json({ limit: "50mb" }));
+  app.use(express.default.urlencoded({ limit: "50mb", extended: true }));
 
-app.use(
-  "/api/trpc",
-  createExpressMiddleware({
-    router: appRouter,
-    createContext,
-  })
-);
+  app.use("/.well-known/apple-developer-merchantid-domain-association", (_req: any, res: any, next: any) => {
+    res.setHeader("Content-Type", "application/octet-stream");
+    next();
+  });
 
-export default app;
+  registerStorageProxy(app);
+  registerOAuthRoutes(app);
+
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
+} catch (err: any) {
+  initError = err;
+  console.error("[API INIT ERROR]", err);
+}
+
+export default function handler(req: any, res: any) {
+  if (initError || !app) {
+    res.status(500).json({
+      error: "Server initialization failed",
+      message: initError?.message || "Unknown error",
+      stack: process.env.NODE_ENV !== "production" ? initError?.stack : undefined,
+    });
+    return;
+  }
+  return app(req, res);
+}
