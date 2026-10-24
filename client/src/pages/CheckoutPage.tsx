@@ -37,10 +37,27 @@ function Field({ label, placeholder, value, onChange, type = "text", autoComplet
   return <label className="block"><span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">{label}</span><span className="relative block"><input required type={type} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} className={`w-full rounded-xl border border-[#d1c4b5] bg-white px-4 py-3.5 text-[15px] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)] ${inputClassName}`} />{adornment && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">{adornment}</span>}</span></label>;
 }
 
+function VisaLogo({ size = 48 }: { size?: number }) {
+  const h = size * 0.6;
+  return <svg width={size} height={h} viewBox="0 0 80 48" fill="none"><rect width="80" height="48" rx="4" fill="#1a1f71" stroke="#141a5e" strokeWidth="1"/><rect y="38" width="80" height="6" fill="#f7a600"/><text x="40" y="30" textAnchor="middle" fill="white" fontSize="22" fontWeight="900" fontStyle="italic" fontFamily="Arial, sans-serif">VISA</text></svg>;
+}
+function MastercardLogo({ size = 48 }: { size?: number }) {
+  const h = size * 0.7;
+  return <svg width={size} height={h} viewBox="0 0 72 50" fill="none"><circle cx="26" cy="25" r="20" fill="#eb001b"/><circle cx="46" cy="25" r="20" fill="#f79e1b"/><path d="M36 9.2a20 20 0 0 1 0 31.6 20 20 0 0 1 0-31.6Z" fill="#ff5f00"/></svg>;
+}
+function AmexLogo({ size = 48 }: { size?: number }) {
+  const h = size * 0.6;
+  return <svg width={size} height={h} viewBox="0 0 80 48" fill="none"><rect width="80" height="48" rx="4" fill="#016fd0"/><text x="40" y="22" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" fontFamily="Arial, sans-serif">AMERICAN</text><text x="40" y="36" textAnchor="middle" fill="white" fontSize="12" fontWeight="900" fontFamily="Arial, sans-serif">EXPRESS</text></svg>;
+}
+function HimyanLogo({ size = 48 }: { size?: number }) {
+  const h = size * 0.6;
+  return <svg width={size} height={h} viewBox="0 0 90 54" fill="none"><text x="52" y="22" textAnchor="middle" fill="#1a1a1a" fontSize="16" fontWeight="900" fontFamily="Arial, sans-serif">هميان</text><text x="52" y="38" textAnchor="middle" fill="#1a1a1a" fontSize="9" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="2">HIMYAN</text><path d="M12 10 L26 27 L12 27 Z" fill="#8d1b3d"/><path d="M16 10 L30 27 L16 27 Z" fill="#b0223f" opacity="0.7"/></svg>;
+}
+
 function CardBrandBadge({ brand, complete }: { brand: "visa" | "mastercard" | "mada" | ""; complete: boolean }) {
-  if (brand === "visa") return <span dir="ltr" className="flex items-center gap-1"><span className="text-sm font-black italic text-[#102c6b]">VISA</span>{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
-  if (brand === "mastercard") return <span dir="ltr" className="flex items-center gap-1"><span className="flex items-center"><i className="mr-[-4px] h-4 w-4 rounded-full bg-[#b5122c]" /><i className="h-4 w-4 rounded-full bg-[#d28a00]" /></span>{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
-  if (brand === "mada") return <span className="flex items-center gap-1"><span className="text-sm font-black text-[#006b84]">مدى</span>{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
+  if (brand === "visa") return <span className="flex items-center gap-1"><VisaLogo size={32} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
+  if (brand === "mastercard") return <span className="flex items-center gap-1"><MastercardLogo size={28} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
+  if (brand === "mada") return <span className="flex items-center gap-1"><HimyanLogo size={32} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
   return null;
 }
 
@@ -74,9 +91,13 @@ function PaymentStep() {
       <div className="rounded-2xl border border-[#d1c4b5] bg-white p-6 shadow-sm sm:p-8">
         <p className="mb-4 text-xs font-bold tracking-wide text-[#4a3f37]">اختاري نوع البطاقة</p>
         <div className="mb-7 flex flex-wrap items-center gap-3" dir="ltr">
-          <button type="button" aria-pressed={method === "visa"} onClick={() => { setMethod("visa"); setCard(""); }} className={`flex h-12 items-center rounded-xl border-2 px-5 text-xl font-black italic transition-all ${method === "visa" ? "border-[#102c6b] bg-[#102c6b]/5 text-[#102c6b]" : "border-[#e0d6cc] text-[#102c6b]/40 hover:border-[#c5b8ab]"}`}>VISA</button>
-          <button type="button" aria-pressed={method === "mastercard"} onClick={() => { setMethod("mastercard"); setCard(""); }} className={`flex h-12 items-center gap-2 rounded-xl border-2 px-5 font-bold transition-all ${method === "mastercard" ? "border-[#b5122c] bg-[#b5122c]/5" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-70"}`}><span className="flex"><span className="mr-[-6px] h-6 w-6 rounded-full bg-[#b5122c]" /><span className="h-6 w-6 rounded-full bg-[#d28a00]" /></span><span className="text-[#2f2925]">Mastercard</span></button>
-          <button type="button" aria-pressed={method === "mada"} onClick={() => { setMethod("mada"); setCard(""); }} className={`flex h-12 items-center rounded-xl border-2 px-5 transition-all ${method === "mada" ? "border-[#006b84] bg-[#006b84]/5" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-70"}`}><span className="text-base font-black text-[#006b84]">مدى</span></button>
+          <button type="button" aria-pressed={method === "visa"} onClick={() => { setMethod("visa"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "visa" ? "border-[#1a1f71] bg-[#1a1f71]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><VisaLogo size={56} /></button>
+          <button type="button" aria-pressed={method === "mastercard"} onClick={() => { setMethod("mastercard"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "mastercard" ? "border-[#eb001b] bg-[#eb001b]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><MastercardLogo size={48} /></button>
+          <button type="button" aria-pressed={method === "mada"} onClick={() => { setMethod("mada"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "mada" ? "border-[#8d1b3d] bg-[#8d1b3d]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><HimyanLogo size={56} /></button>
+        </div>
+        <div className="mb-6 flex items-center justify-center gap-4 rounded-lg bg-[#f5f0eb] px-4 py-2.5">
+          <span className="text-[10px] font-bold text-[#9a8e83]">نقبل</span>
+          <VisaLogo size={36} /><MastercardLogo size={32} /><AmexLogo size={36} /><HimyanLogo size={40} />
         </div>
 
         {/* Card Fields */}
