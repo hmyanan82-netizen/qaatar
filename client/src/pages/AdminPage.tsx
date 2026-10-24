@@ -20,7 +20,13 @@ const MUTED = "text-[#9fc0cb]";
 const FAINT = "text-[#7ba3b1]";
 
 function AccessDenied() {
-  return <main dir="rtl" className="grid min-h-screen place-items-center bg-[#04202b] p-6"><div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#072b38] p-9 text-center shadow-2xl"><LockKeyhole className="mx-auto text-[#2ce0bd]" size={38} /><h1 className="mt-5 text-2xl font-extrabold text-white">دخول المالك فقط</h1><p className="mt-3 text-sm leading-7 text-[#9fc0cb]">سجّل الدخول بحساب مالك المشروع لفتح لوحة الإشعارات المرتبطة بالمتجر.</p><button onClick={startLogin} className="mt-7 w-full rounded-2xl bg-[#08b899] px-6 py-3 font-bold text-[#03222c] hover:bg-[#0ad0ac]">تسجيل دخول المالك</button></div></main>;
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const login = trpc.auth.loginWithPassword.useMutation({
+    onSuccess: () => window.location.reload(),
+    onError: (err) => setError(err.message || "كلمة المرور غير صحيحة"),
+  });
+  return <main dir="rtl" className="grid min-h-screen place-items-center bg-[#04202b] p-6"><div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#072b38] p-9 text-center shadow-2xl"><LockKeyhole className="mx-auto text-[#2ce0bd]" size={38} /><h1 className="mt-5 text-2xl font-extrabold text-white">دخول المالك فقط</h1><p className="mt-3 text-sm leading-7 text-[#9fc0cb]">أدخل كلمة مرور الإدارة لفتح لوحة الإشعارات المرتبطة بالمتجر.</p><form onSubmit={(e) => { e.preventDefault(); setError(""); login.mutate({ password }); }} className="mt-5 space-y-3"><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="كلمة مرور الإدارة" className="w-full rounded-2xl border border-white/10 bg-white/[.06] px-5 py-3 text-center text-white outline-none placeholder:text-[#6f97a5] focus:border-[#08b899]" autoFocus />{error && <p className="text-sm text-red-300">{error}</p>}<button type="submit" disabled={login.isPending || !password} className="mt-3 w-full rounded-2xl bg-[#08b899] px-6 py-3 font-bold text-[#03222c] hover:bg-[#0ad0ac] disabled:opacity-50">{login.isPending ? "جاري الدخول..." : "تسجيل دخول المالك"}</button></form></div></main>;
 }
 
 function playAlert() {

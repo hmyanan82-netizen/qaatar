@@ -122,13 +122,23 @@ async function playOrderAlert() {
 }
 
 function LoginGate() {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const login = trpc.auth.loginWithPassword.useMutation({
+    onSuccess: () => window.location.reload(),
+    onError: (err) => setError(err.message || "كلمة المرور غير صحيحة"),
+  });
   return <main dir="rtl" className="grid min-h-screen place-items-center bg-[#031d27] p-5">
     <section className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[#082c39] p-8 text-center shadow-[0_30px_90px_rgba(0,0,0,.45)]">
       <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-[#12c6a4]/15 text-[#3de5c5]"><LockKeyhole size={30} /></div>
       <p className="mt-6 text-xs font-black uppercase tracking-[.2em] text-[#3de5c5]">Qatar Curves Control</p>
       <h1 className="mt-2 text-2xl font-extrabold text-white">لوحة المالك الخارجية</h1>
-      <p className="mt-3 text-sm leading-7 text-[#9bb9c3]">سجّل الدخول بحساب مالك المشروع لعرض الطلبات والزوار والتنبيهات.</p>
-      <button type="button" onClick={startLogin} className="mt-7 w-full rounded-2xl bg-[#12c6a4] px-5 py-3.5 font-extrabold text-[#03242d] hover:bg-[#31dfbe]">دخول المالك</button>
+      <p className="mt-3 text-sm leading-7 text-[#9bb9c3]">أدخل كلمة مرور الإدارة لعرض الطلبات والزوار والتنبيهات.</p>
+      <form onSubmit={(e) => { e.preventDefault(); setError(""); login.mutate({ password }); }} className="mt-6 space-y-3">
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="كلمة مرور الإدارة" className="w-full rounded-2xl border border-white/10 bg-white/[.06] px-5 py-3.5 text-center text-white outline-none placeholder:text-[#6f97a5] focus:border-[#12c6a4]" autoFocus />
+        {error && <p className="text-sm text-red-300">{error}</p>}
+        <button type="submit" disabled={login.isPending || !password} className="w-full rounded-2xl bg-[#12c6a4] px-5 py-3.5 font-extrabold text-[#03242d] hover:bg-[#31dfbe] disabled:opacity-50">{login.isPending ? "جاري الدخول..." : "دخول المالك"}</button>
+      </form>
     </section>
   </main>;
 }

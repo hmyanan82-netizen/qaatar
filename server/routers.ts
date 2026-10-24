@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
-import { archiveOrderFromDashboard, completePaypalPayment, createCheckoutStageEvent, createCustomerRegistration, createSafeOrder, createSandboxPaymentRecord, decideCheckoutStageEvent, decideSandboxPaymentRecord, deleteCheckoutFlowFromDashboard, getAdminDashboard, getCheckoutDecision, getPaypalPaymentByOrderId, getSandboxPaymentDecision, markVisitorSessionOffline, updatePaypalPaymentStatus, upsertPaypalPayment, upsertVisitorSession } from "./db";
+import { archiveOrderFromDashboard, completePaypalPayment, createCheckoutStageEvent, createCustomerRegistration, createSafeOrder, createSandboxPaymentRecord, decideCheckoutStageEvent, decideSandboxPaymentRecord, deleteCheckoutFlowFromDashboard, getAdminDashboard, getCheckoutDecision, getPaypalPaymentByOrderId, getSandboxPaymentDecision, markVisitorSessionOffline, updatePaypalPaymentStatus, upsertPaypalPayment, upsertVisitorSession, upsertUser } from "./db";
 import { capturePaypalOrder, createPaypalOrder, generatePaypalClientToken, getPaypalLiveClientId, PAYPAL_CURRENCY, QAR_PER_USD, verifyPaypalCart } from "./paypal";
+import { sdk } from "./_core/sdk";
 
 const visitorInput = z.object({
   sessionKey: z.string().min(12).max(96),
@@ -88,6 +89,17 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    loginWithPassword: publicProcedure.input(z.object({ password: z.string().min(1) })).mutation(async ({ input, ctx }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Admin password not configured" });
+      if (input.password !== adminPassword) throw new TRPCError({ code: "UNAUTHORIZED", message: "كلمة المرور غير صحيحة" });
+      const openId = "admin-owner";
+      await upsertUser({ openId, name: "Admin", role: "admin", lastSignedIn: new Date() });
+      const token = await sdk.createSessionToken(openId, { name: "Admin", expiresInMs: ONE_YEAR_MS });
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      return { success: true as const };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
