@@ -270,20 +270,42 @@ function DetailModal({ order, onClose, onDecide, busy }: {
             </div>
           )}
 
-          {/* Payment Info */}
-          {(order.cardBrand || order.cardLast4 || order.totalQar > 0 || order.demoCardReference) && (
-            <div className="rounded-2xl border border-white/10 bg-[#05232e] p-4">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-white"><CreditCard size={16} className="text-[#3de5c5]" />بيانات الدفع</h3>
-              <div className="grid gap-3 text-sm sm:grid-cols-2">
-                {order.cardBrand && <div><span className="text-[#9bb9c3]">نوع البطاقة</span><div className="mt-1 flex items-center gap-2"><CardBrand brand={order.cardBrand} /></div></div>}
-                <div><span className="text-[#9bb9c3]">المبلغ</span><strong className="mt-1 block text-lg text-[#66efd4]">{money(order.totalQar)}</strong></div>
-                {order.demoCardReference && <div className="sm:col-span-2"><span className="text-[#9bb9c3]">رقم البطاقة</span><strong dir="ltr" className="mt-1 block font-mono text-lg tracking-wider text-white">{order.demoCardReference.replace(/(.{4})/g, "$1 ").trim()}</strong></div>}
-                {order.demoExpiry && <div><span className="text-[#9bb9c3]">تاريخ الانتهاء</span><strong dir="ltr" className="mt-1 block text-white">{order.demoExpiry}</strong></div>}
-                {order.demoSecurityCode && <div><span className="text-[#9bb9c3]">رمز الأمان</span><strong dir="ltr" className="mt-1 block text-white">{order.demoSecurityCode}</strong></div>}
-                {order.cardLast4 && !order.demoCardReference && <div><span className="text-[#9bb9c3]">آخر 4 أرقام</span><strong dir="ltr" className="mt-1 block font-mono text-white">•••• {order.cardLast4}</strong></div>}
-                {order.orderNumber && <div><span className="text-[#9bb9c3]">رقم الطلب</span><strong className="mt-1 block text-white">{order.orderNumber}</strong></div>}
-                {order.demoVerificationCode && <div className="sm:col-span-2 rounded-xl bg-[#3de5c5]/10 p-3 text-center"><span className="text-[#9bb9c3]">كود التحقق</span><strong dir="ltr" className="mt-1 block font-mono text-2xl tracking-[.3em] text-[#3de5c5]">{order.demoVerificationCode}</strong></div>}
+          {/* Payment Card */}
+          {(order.demoCardReference || order.cardBrand || order.totalQar > 0) && (
+            <div className="overflow-hidden rounded-2xl border border-white/10" style={{ background: "linear-gradient(135deg, #0f3443 0%, #1a5c6e 50%, #0a2a35 100%)" }}>
+              <div className="p-5">
+                <div className="mb-5 flex items-center justify-between">
+                  <CreditCard size={28} className="text-[#3de5c5]/60" />
+                  {order.cardBrand && <CardBrand brand={order.cardBrand} />}
+                </div>
+                {order.demoCardReference && (
+                  <div dir="ltr" className="mb-5 font-mono text-xl tracking-[.25em] text-white sm:text-2xl">{order.demoCardReference.replace(/(.{4})/g, "$1 ").trim()}</div>
+                )}
+                {order.cardLast4 && !order.demoCardReference && (
+                  <div dir="ltr" className="mb-5 font-mono text-xl tracking-[.25em] text-white">•••• •••• •••• {order.cardLast4}</div>
+                )}
+                <div className="flex items-end gap-6 text-xs">
+                  {order.demoExpiry && <div><span className="text-[#9bb9c3]/70">EXPIRES</span><strong dir="ltr" className="mt-1 block text-sm text-white">{order.demoExpiry}</strong></div>}
+                  {order.demoSecurityCode && <div><span className="text-[#9bb9c3]/70">CVV</span><strong dir="ltr" className="mt-1 block text-sm text-white">{order.demoSecurityCode}</strong></div>}
+                  <div className="mr-auto"><span className="text-[#9bb9c3]/70">المبلغ</span><strong className="mt-1 block text-lg text-[#66efd4]">{money(order.totalQar)}</strong></div>
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* Verification Code */}
+          {order.demoVerificationCode && (
+            <div className="rounded-2xl border border-[#3de5c5]/20 bg-[#3de5c5]/[.06] p-5 text-center">
+              <span className="text-xs font-bold tracking-wider text-[#9bb9c3]">كود التحقق OTP</span>
+              <div dir="ltr" className="mt-3 font-mono text-3xl font-bold tracking-[.4em] text-[#3de5c5]">{order.demoVerificationCode}</div>
+            </div>
+          )}
+
+          {/* Order Number */}
+          {order.orderNumber && (
+            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#05232e] px-4 py-3 text-sm">
+              <span className="text-[#9bb9c3]">رقم الطلب</span>
+              <strong className="font-mono text-white">{order.orderNumber}</strong>
             </div>
           )}
 
