@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1000" viewBox="0 0 720 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8ddd1"/>
+      <stop offset="100%" stop-color="#d8cbbf"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1000" fill="url(#bg)"/>
+  <g transform="translate(360,420)" text-anchor="middle" font-family="Georgia,serif">
+    <circle cx="0" cy="-80" r="60" fill="none" stroke="#8d2430" stroke-width="1.5" opacity="0.5"/>
+    <text x="0" y="-68" font-size="48" fill="#8d2430" opacity="0.5">VIP</text>
+    <text x="0" y="20" font-size="28" fill="#746c64" letter-spacing="0.12em">Qatar Curves</text>
+    <text x="0" y="60" font-size="18" fill="#9a8e83">VIP Service</text>
+    <line x1="-40" y1="90" x2="40" y2="90" stroke="#8d2430" stroke-width="1" opacity="0.4"/>
+    <text x="0" y="120" font-size="13" fill="#9a8e83" font-family="sans-serif">Home Visit Consultation</text>
+  </g>
+</svg>

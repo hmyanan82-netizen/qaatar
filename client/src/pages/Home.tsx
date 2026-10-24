@@ -9,7 +9,7 @@ const products = [
   { name: "مشد Ann Chery 5166", english: "ANN CHERY 5166", priceKwd: 65, category: "تشكيل يومي", image: "https://kwcurves.com/wp-content/uploads/2024/11/IMG_9811-1.jpg.webp", tone: "نود" },
   { name: "شورت CURVES 7811", english: "CURVES 7811 INVISIBLE SHORT", priceKwd: 39, category: "شورتات تشكيل", image: "https://kwcurves.com/wp-content/uploads/2025/07/7811-e1773614640490.png", tone: "رملي" },
   { name: "مشد Ann Chery 1024", english: "ANN CHERY 1024 PLUS SIZE", priceKwd: 35, category: "مقاسات ممتدة", image: "https://kwcurves.com/wp-content/uploads/2020/12/0291d24c-4651-4b74-acdb-da8388f3c62c.jpeg", tone: "بني" },
-  { name: "مشد CURVES 6152", english: "CURVES 6152", priceKwd: 42.86, category: "مشدات كاملة", image: "/manus-storage/curves-6152-tahini-web_2e831828.jpg", tone: "طحيني · أسود · موكا" },
+  { name: "مشد CURVES 6152", english: "CURVES 6152", priceKwd: 42.86, category: "مشدات كاملة", image: "/images/curves-6152-tahini.svg", tone: "طحيني · أسود · موكا" },
   { name: "برا CURVES 4000", english: "CURVES 4000 FULL COVERAGE BRA", priceKwd: 15, category: "برا تشكيلية", image: "https://kwcurves.com/wp-content/uploads/2024/12/d965c796-43df-4eb0-9eff-efffba69c5cb.jpeg.webp", tone: "بيج" },
   { name: "مشد Ann Chery 5147", english: "ANN CHERY 5147", priceKwd: 68, category: "مشدات ما بعد الجراحة", image: "https://kwcurves.com/wp-content/uploads/2020/12/6d771703-67bf-47f0-a649-816a683ed46a-800x1062.jpeg.webp", tone: "رمادي" },
   { name: "مشد Ann Chery 5177", english: "ANN CHERY 5177", priceKwd: 75, category: "مشدات ما بعد الجراحة", image: "https://kwcurves.com/wp-content/uploads/2020/12/WhatsApp-Image-2026-04-28-at-21.30.28.jpeg.webp", tone: "بني" },

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <rect width="600" height="800" fill="#f0e3d6"/>
+  <g transform="translate(300,340)" text-anchor="middle" font-family="Georgia,serif">
+    <rect x="-80" y="-120" width="160" height="200" rx="80" fill="none" stroke="#c4a882" stroke-width="1.5" opacity="0.5"/>
+    <text x="0" y="120" font-size="24" fill="#746c64" letter-spacing="0.1em">CURVES 6152</text>
+    <text x="0" y="155" font-size="15" fill="#9a8e83">Tahini / Beige</text>
+    <line x1="-30" y1="178" x2="30" y2="178" stroke="#c4a882" stroke-width="1" opacity="0.5"/>
+    <text x="0" y="205" font-size="12" fill="#b5a08a" font-family="sans-serif">Qatar Curves</text>
+  </g>
+</svg>
