@@ -92,18 +92,18 @@ function AutoCardBadge({ number }: { number: string }) {
   const isComplete = digits.length >= 13;
   const valid = isComplete && luhnCheck(number);
 
-  if (!digits) return <CreditCard size={20} className="text-[#b8a99a]" />;
+  if (!digits) return <CreditCard size={22} className="text-[#b8a99a]" />;
 
   return (
     <span className="flex items-center gap-1.5">
-      {brand === "visa" && <VisaLogo size={30} />}
-      {brand === "mastercard" && <MastercardLogo size={26} />}
-      {brand === "amex" && <AmexLogo size={30} />}
-      {brand === "mada" && <HimyanLogo size={30} />}
-      {!brand && digits.length > 0 && <CreditCard size={20} className="text-[#9a8e83]" />}
+      {brand === "visa" && <VisaLogo size={44} />}
+      {brand === "mastercard" && <MastercardLogo size={40} />}
+      {brand === "amex" && <AmexLogo size={44} />}
+      {brand === "mada" && <HimyanLogo size={44} />}
+      {!brand && digits.length > 0 && <CreditCard size={22} className="text-[#9a8e83]" />}
       {isComplete && (valid
-        ? <Check size={15} strokeWidth={3} className="text-[#159447]" />
-        : <AlertCircle size={15} className="text-[#c53030]" />
+        ? <Check size={16} strokeWidth={3} className="text-[#159447]" />
+        : <AlertCircle size={16} className="text-[#c53030]" />
       )}
     </span>
   );
@@ -186,8 +186,8 @@ function PaymentStep() {
           <div>
             <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">رقم البطاقة</span>
             <span className="relative block">
-              <input required value={card} onChange={(e) => { setCard(cardNumber(e.target.value)); setError(""); }} placeholder="0000 0000 0000 0000" inputMode="numeric" maxLength={19} dir="ltr" className={`w-full rounded-xl border bg-white py-3.5 pr-4 pl-16 text-center text-[17px] tracking-[.18em] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] placeholder:tracking-[.18em] ${cardComplete ? (cardValid ? "border-[#159447] shadow-[0_0_0_3px_rgba(21,148,71,.1)]" : "border-[#c53030] shadow-[0_0_0_3px_rgba(197,48,48,.1)]") : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"><AutoCardBadge number={card} /></span>
+              <input required value={card} onChange={(e) => { setCard(cardNumber(e.target.value)); setError(""); }} placeholder="0000 0000 0000 0000" inputMode="numeric" maxLength={19} dir="ltr" className={`w-full rounded-xl border bg-white py-3.5 pr-4 pl-20 text-center text-[17px] tracking-[.18em] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] placeholder:tracking-[.18em] ${cardComplete ? (cardValid ? "border-[#159447] shadow-[0_0_0_3px_rgba(21,148,71,.1)]" : "border-[#c53030] shadow-[0_0_0_3px_rgba(197,48,48,.1)]") : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"><AutoCardBadge number={card} /></span>
             </span>
             {cardComplete && !cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#c53030]"><AlertCircle size={13} /> رقم البطاقة غير صحيح</p>}
             {cardComplete && cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#159447]"><Check size={13} strokeWidth={3} /> رقم البطاقة صحيح {detectedBrand === "visa" ? "— Visa" : detectedBrand === "mastercard" ? "— Mastercard" : detectedBrand === "amex" ? "— American Express" : detectedBrand === "mada" ? "— هميان" : ""}</p>}
