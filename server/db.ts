@@ -10,10 +10,16 @@ const DB_OPERATION_TIMEOUT_MS = 10_000;
 
 let pool: pg.Pool | null = null;
 
+const DEFAULT_DATABASE_URL = "postgresql://postgres.oceuvnmfkkesyjgomwip:8%25Vi2%2BysgG3dqWu@aws-0-eu-west-1.pooler.supabase.com:6543/postgres";
+
+function getDatabaseUrl() {
+  return process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+}
+
 function getPool(): pg.Pool {
   if (!pool) {
     pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: getDatabaseUrl(),
       max: 5,
       idleTimeoutMillis: 15_000,
       connectionTimeoutMillis: 10_000,
@@ -24,7 +30,7 @@ function getPool(): pg.Pool {
 }
 
 async function withDb<T>(operation: (db: NodePgDatabase) => Promise<T>, attempts = 3): Promise<T> {
-  if (!process.env.DATABASE_URL) throw new Error("Database unavailable");
+  if (!getDatabaseUrl()) throw new Error("Database unavailable");
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -46,7 +52,7 @@ async function withDb<T>(operation: (db: NodePgDatabase) => Promise<T>, attempts
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
-  if (!process.env.DATABASE_URL) return;
+  if (!getDatabaseUrl()) return;
   const values: InsertUser = { openId: user.openId };
   const updateSet: Record<string, unknown> = {};
   const textFields = ["name", "email", "loginMethod"] as const;
@@ -75,7 +81,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  if (!process.env.DATABASE_URL) return undefined;
+  if (!getDatabaseUrl()) return undefined;
   return withDb(async db => {
     const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
     return result[0];
@@ -83,7 +89,7 @@ export async function getUserByOpenId(openId: string) {
 }
 
 export async function upsertVisitorSession(input: { sessionKey: string; currentPath: string; userAgent?: string }) {
-  if (!process.env.DATABASE_URL) return;
+  if (!getDatabaseUrl()) return;
   await withDb(async db => {
     await db.insert(visitorSessions).values({
       sessionKey: input.sessionKey,
@@ -104,7 +110,7 @@ export async function upsertVisitorSession(input: { sessionKey: string; currentP
 }
 
 export async function markVisitorSessionOffline(sessionKey: string) {
-  if (!process.env.DATABASE_URL) return { success: true as const };
+  if (!getDatabaseUrl()) return { success: true as const };
   await withDb(async db => {
     await db.update(visitorSessions).set({ isActive: 0, lastSeenAt: new Date() }).where(eq(visitorSessions.sessionKey, sessionKey));
   });
@@ -112,7 +118,7 @@ export async function markVisitorSessionOffline(sessionKey: string) {
 }
 
 export async function createCustomerRegistration(input: InsertCustomerRegistration) {
-  if (!process.env.DATABASE_URL) return undefined;
+  if (!getDatabaseUrl()) return undefined;
   return withDb(async db => {
     const result = await db.insert(customerRegistrations).values(input).returning();
     return result[0];
@@ -321,7 +327,7 @@ export async function deleteCheckoutFlowFromDashboard(flowId: string) {
 }
 
 export async function getAdminDashboard() {
-  if (!process.env.DATABASE_URL) return { visitors: 0, online: 0, registrations: 0, newRegistrations: 0, recentVisitors: [], recentRegistrations: [], recentOrders: [], recentStageEvents: [], recentSandboxPayments: [], recentPaypalPayments: [], newOrders: 0 };
+  if (!getDatabaseUrl()) return { visitors: 0, online: 0, registrations: 0, newRegistrations: 0, recentVisitors: [], recentRegistrations: [], recentOrders: [], recentStageEvents: [], recentSandboxPayments: [], recentPaypalPayments: [], newOrders: 0 };
   return withDb(async db => {
     const onlineSince = new Date(Date.now() - VISITOR_ONLINE_WINDOW_MS);
     const [visitorCount] = await db.select({ count: sql<number>`count(*)` }).from(visitorSessions);
