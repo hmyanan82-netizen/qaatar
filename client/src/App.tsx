@@ -8,7 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
-import PayPalCheckoutPage from "./pages/PayPalCheckoutPage";
+
 import VipPage from "./pages/VipPage";
 import CartPage from "./pages/CartPage";
 import { AdminCustomersPage, AdminOverviewPage, AdminVisitorsPage } from "./pages/AdminPage";
@@ -21,8 +21,6 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/product/:slug" component={ProductPage} />
-      <Route path="/checkout/payment" component={PayPalCheckoutPage} />
-      <Route path="/checkout/verify" component={PayPalCheckoutPage} />
       <Route path="/checkout/:step" component={CheckoutPage} />
       <Route path="/vip" component={VipPage} />
       <Route path="/cart" component={CartPage} />
