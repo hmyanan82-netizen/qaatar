@@ -1,6 +1,6 @@
 /* Qatar Curves — professional checkout flow: calm editorial surfaces, clear progress, Qatar delivery zones, demo payment, six-digit verification. */
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, LoaderCircle, LockKeyhole, MapPin, ShieldCheck, Smartphone } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronDown, CreditCard, LoaderCircle, LockKeyhole, MapPin, ShieldCheck, Smartphone } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { cartTotal, readCart, SALE_PERCENT, writeCart, type CartState } from "@/lib/cart";
 import { trpc } from "@/lib/trpc";
@@ -54,11 +54,59 @@ function HimyanLogo({ size = 48 }: { size?: number }) {
   return <svg width={size} height={h} viewBox="0 0 90 54" fill="none"><text x="52" y="22" textAnchor="middle" fill="#1a1a1a" fontSize="16" fontWeight="900" fontFamily="Arial, sans-serif">هميان</text><text x="52" y="38" textAnchor="middle" fill="#1a1a1a" fontSize="9" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="2">HIMYAN</text><path d="M12 10 L26 27 L12 27 Z" fill="#8d1b3d"/><path d="M16 10 L30 27 L16 27 Z" fill="#b0223f" opacity="0.7"/></svg>;
 }
 
-function CardBrandBadge({ brand, complete }: { brand: "visa" | "mastercard" | "mada" | ""; complete: boolean }) {
-  if (brand === "visa") return <span className="flex items-center gap-1"><VisaLogo size={32} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
-  if (brand === "mastercard") return <span className="flex items-center gap-1"><MastercardLogo size={28} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
-  if (brand === "mada") return <span className="flex items-center gap-1"><HimyanLogo size={32} />{complete && <Check size={14} strokeWidth={3} className="text-[#159447]" />}</span>;
-  return null;
+function detectCardBrand(number: string): "visa" | "mastercard" | "mada" | "amex" | "" {
+  const d = number.replace(/\s/g, "");
+  if (!d) return "";
+  if (d.startsWith("5888")) return "mada";
+  if (/^3[47]/.test(d)) return "amex";
+  if (d.startsWith("4")) return "visa";
+  if (/^5[1-5]/.test(d) || /^2[2-7]/.test(d)) return "mastercard";
+  return "";
+}
+
+function luhnCheck(number: string): boolean {
+  const d = number.replace(/\s/g, "");
+  if (d.length < 13 || d.length > 19) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = d.length - 1; i >= 0; i--) {
+    let n = parseInt(d[i], 10);
+    if (alt) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function isExpiryValid(month: string, year: string): boolean {
+  if (!month || !year) return true;
+  const now = new Date();
+  const ey = parseInt(year, 10);
+  const em = parseInt(month, 10);
+  return ey > now.getFullYear() || (ey === now.getFullYear() && em >= now.getMonth() + 1);
+}
+
+function AutoCardBadge({ number }: { number: string }) {
+  const digits = number.replace(/\s/g, "");
+  const brand = detectCardBrand(number);
+  const isComplete = digits.length >= 13;
+  const valid = isComplete && luhnCheck(number);
+
+  if (!digits) return <CreditCard size={20} className="text-[#b8a99a]" />;
+
+  return (
+    <span className="flex items-center gap-1.5">
+      {brand === "visa" && <VisaLogo size={30} />}
+      {brand === "mastercard" && <MastercardLogo size={26} />}
+      {brand === "amex" && <AmexLogo size={30} />}
+      {brand === "mada" && <HimyanLogo size={30} />}
+      {!brand && digits.length > 0 && <CreditCard size={20} className="text-[#9a8e83]" />}
+      {isComplete && (valid
+        ? <Check size={15} strokeWidth={3} className="text-[#159447]" />
+        : <AlertCircle size={15} className="text-[#c53030]" />
+      )}
+    </span>
+  );
 }
 
 function AddressStep() {
@@ -73,54 +121,101 @@ function AddressStep() {
 function PaymentStep() {
   const [, navigate] = useLocation();
   const createSandboxPayment = trpc.analytics.createSandboxPayment.useMutation();
-  const [card, setCard] = useState(""); const [month, setMonth] = useState(""); const [year, setYear] = useState(""); const [cvv, setCvv] = useState(""); const [holder, setHolder] = useState(""); const [method, setMethod] = useState<"visa" | "mastercard" | "mada">("visa"); const [error, setError] = useState(() => localStorage.getItem("qatar-curves-payment-error") || ""); const [isSubmitting, setIsSubmitting] = useState(false);
+  const [card, setCard] = useState(""); const [month, setMonth] = useState(""); const [year, setYear] = useState(""); const [cvv, setCvv] = useState(""); const [holder, setHolder] = useState(""); const [error, setError] = useState(() => localStorage.getItem("qatar-curves-payment-error") || ""); const [isSubmitting, setIsSubmitting] = useState(false);
   const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
   const years = ["2026", "2027", "2028", "2029", "2030"];
-  const testCards = { visa: "4242424242424242", mastercard: "5555555555554444", mada: "5888450000000000" } as const;
+  const validCards: Record<string, "visa" | "mastercard" | "mada"> = { "4242424242424242": "visa", "5555555555554444": "mastercard", "5888450000000000": "mada" };
   useEffect(() => { localStorage.removeItem("qatar-curves-payment-error"); }, []);
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (isSubmitting) return; const digits = card.replace(/\s/g, ""); if (!holder || digits !== testCards[method] || !month || !year || !["123", "999"].includes(cvv)) { setError(`أدخلي رقم البطاقة ${method === "visa" ? "4242 4242 4242 4242" : method === "mastercard" ? "5555 5555 5555 4444" : "5888 4500 0000 0000"} ورمز الأمان 123 أو 999`); return; } const checkout = JSON.parse(localStorage.getItem("qatar-curves-checkout") || "null"); const cart = readCart(); if (!checkout || !cart.items.length) { setError("أدخلي بيانات الطلب أولًا"); return; } setError(""); setIsSubmitting(true); const flowId = getCheckoutFlowId(); const demoCardNumber = digits as "4242424242424242" | "5555555555554444" | "5888450000000000"; const demoSecurityCode = cvv as "123" | "999"; const demoExpiry = `${month}/${year.slice(-2)}`; try { await createSandboxPayment.mutateAsync({ stage: "payment", recordKey: `${flowId}-payment-${Date.now().toString(36)}`, flowId, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), amountQar: cartTotal(cart), cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode }); localStorage.setItem(SANDBOX_PAYMENT_KEY, JSON.stringify({ cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode, holder })); navigate("/checkout/verify"); } catch { setError("تعذر إرسال البيانات، حاولي مرة أخرى"); setIsSubmitting(false); } };
-  const cardNumber = (value: string) => value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+
   const rawCard = card.replace(/\s/g, "");
+  const detectedBrand = useMemo(() => detectCardBrand(card), [card]);
+  const cardValid = rawCard.length >= 13 && luhnCheck(card);
+  const cardComplete = rawCard.length >= 13;
+  const expiryValid = isExpiryValid(month, year);
+  const expiryTouched = month !== "" && year !== "";
+  const cvvValid = cvv.length === 3;
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+    const digits = rawCard;
+    const method = validCards[digits];
+
+    if (!holder.trim()) { setError("أدخلي الاسم على البطاقة"); return; }
+    if (!cardComplete) { setError("أدخلي رقم البطاقة كاملاً"); return; }
+    if (!cardValid) { setError("رقم البطاقة غير صحيح"); return; }
+    if (!method) { setError("رقم البطاقة غير مدعوم"); return; }
+    if (!month || !year) { setError("اختاري تاريخ انتهاء البطاقة"); return; }
+    if (!expiryValid) { setError("تاريخ انتهاء البطاقة منتهي الصلاحية"); return; }
+    if (!cvvValid) { setError("أدخلي رمز الأمان (3 أرقام)"); return; }
+
+    const checkout = JSON.parse(localStorage.getItem("qatar-curves-checkout") || "null");
+    const cart = readCart();
+    if (!checkout || !cart.items.length) { setError("أدخلي بيانات الطلب أولًا"); return; }
+
+    setError(""); setIsSubmitting(true);
+    const flowId = getCheckoutFlowId();
+    const demoCardNumber = digits as "4242424242424242" | "5555555555554444" | "5888450000000000";
+    const demoSecurityCode = cvv as "123" | "999";
+    const demoExpiry = `${month}/${year.slice(-2)}`;
+    try {
+      await createSandboxPayment.mutateAsync({ stage: "payment", recordKey: `${flowId}-payment-${Date.now().toString(36)}`, flowId, customerLabel: checkout.name, phone: checkout.phone, zone: checkout.zone, address: checkout.address, items: cart.items.map(item => ({ name: item.name, quantity: item.quantity, size: item.size, color: item.color, priceQar: item.priceQar })), amountQar: cartTotal(cart), cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode });
+      localStorage.setItem(SANDBOX_PAYMENT_KEY, JSON.stringify({ cardBrand: method, demoCardNumber, demoExpiry, demoSecurityCode, holder }));
+      navigate("/checkout/verify");
+    } catch { setError("تعذر إرسال البيانات، حاولي مرة أخرى"); setIsSubmitting(false); }
+  };
+  const cardNumber = (value: string) => value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+
   return <><CheckoutHeader active={1} /><main className="container py-10 lg:py-16">
     <div className="mb-8 max-w-[720px]">
       <h1 className="display-serif text-4xl sm:text-5xl">صفحة الدفع</h1>
       <p className="mt-3 text-sm leading-7 text-[#746c64]">أدخلي بيانات البطاقة لإتمام عملية الشراء بأمان.</p>
     </div>
     <form onSubmit={submit} className="max-w-[680px] space-y-6">
-      {/* Card Type Selection */}
       <div className="rounded-2xl border border-[#d1c4b5] bg-white p-6 shadow-sm sm:p-8">
-        <p className="mb-4 text-xs font-bold tracking-wide text-[#4a3f37]">اختاري نوع البطاقة</p>
-        <div className="mb-7 flex flex-wrap items-center gap-3" dir="ltr">
-          <button type="button" aria-pressed={method === "visa"} onClick={() => { setMethod("visa"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "visa" ? "border-[#1a1f71] bg-[#1a1f71]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><VisaLogo size={56} /></button>
-          <button type="button" aria-pressed={method === "mastercard"} onClick={() => { setMethod("mastercard"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "mastercard" ? "border-[#eb001b] bg-[#eb001b]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><MastercardLogo size={48} /></button>
-          <button type="button" aria-pressed={method === "mada"} onClick={() => { setMethod("mada"); setCard(""); }} className={`flex h-14 items-center justify-center rounded-xl border-2 px-4 transition-all ${method === "mada" ? "border-[#8d1b3d] bg-[#8d1b3d]/5 shadow-sm" : "border-[#e0d6cc] opacity-50 hover:border-[#c5b8ab] hover:opacity-80"}`}><HimyanLogo size={56} /></button>
-        </div>
+        {/* Accepted methods strip */}
         <div className="mb-6 flex items-center justify-center gap-4 rounded-lg bg-[#f5f0eb] px-4 py-2.5">
           <span className="text-[10px] font-bold text-[#9a8e83]">نقبل</span>
           <VisaLogo size={36} /><MastercardLogo size={32} /><AmexLogo size={36} /><HimyanLogo size={40} />
         </div>
 
-        {/* Card Fields */}
         <div className="space-y-5">
-          <Field label="الاسم على البطاقة" placeholder="الاسم الكامل" value={holder} onChange={setHolder} autoComplete="off" inputClassName="text-right" />
-          <Field label="رقم البطاقة" placeholder="0000 0000 0000 0000" value={card} onChange={(value) => setCard(cardNumber(value))} inputMode="numeric" maxLength={19} inputClassName="text-center tracking-widest" adornment={<CardBrandBadge brand={method} complete={rawCard === testCards[method]} />} />
+          {/* Card Holder */}
+          <Field label="الاسم على البطاقة" placeholder="الاسم الكامل" value={holder} onChange={setHolder} autoComplete="cc-name" inputClassName="text-right" />
+
+          {/* Card Number with auto-detect */}
+          <div>
+            <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">رقم البطاقة</span>
+            <span className="relative block">
+              <input required value={card} onChange={(e) => { setCard(cardNumber(e.target.value)); setError(""); }} placeholder="0000 0000 0000 0000" inputMode="numeric" maxLength={19} dir="ltr" className={`w-full rounded-xl border bg-white py-3.5 pr-4 pl-16 text-center text-[17px] tracking-[.18em] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] placeholder:tracking-[.18em] ${cardComplete ? (cardValid ? "border-[#159447] shadow-[0_0_0_3px_rgba(21,148,71,.1)]" : "border-[#c53030] shadow-[0_0_0_3px_rgba(197,48,48,.1)]") : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"><AutoCardBadge number={card} /></span>
+            </span>
+            {cardComplete && !cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#c53030]"><AlertCircle size={13} /> رقم البطاقة غير صحيح</p>}
+            {cardComplete && cardValid && <p className="mt-1.5 flex items-center gap-1 text-xs text-[#159447]"><Check size={13} strokeWidth={3} /> رقم البطاقة صحيح {detectedBrand === "visa" ? "— Visa" : detectedBrand === "mastercard" ? "— Mastercard" : detectedBrand === "amex" ? "— American Express" : detectedBrand === "mada" ? "— هميان" : ""}</p>}
+          </div>
+
+          {/* CVV + Month + Year */}
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            <Field label="رمز الأمان" placeholder="CVV" value={cvv} onChange={(value) => setCvv(value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" maxLength={3} autoComplete="off" inputClassName="text-center" />
+            <div>
+              <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">رمز الأمان</span>
+              <input required value={cvv} onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="CVV" inputMode="numeric" maxLength={3} autoComplete="cc-csc" dir="ltr" className={`h-[50px] w-full rounded-xl border bg-white text-center text-[15px] shadow-sm outline-none transition-all duration-200 placeholder:text-[#b8a99a] ${cvv.length === 3 ? "border-[#159447]" : cvv.length > 0 && cvv.length < 3 ? "border-[#d1c4b5] focus:border-[#8d2430]" : "border-[#d1c4b5] focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"}`} />
+            </div>
             <label className="block">
               <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">الشهر</span>
               <span className="relative block">
-                <select required value={month} onChange={(event) => setMonth(event.target.value)} className="h-[50px] w-full appearance-none rounded-xl border border-[#d1c4b5] bg-white px-4 text-center text-[15px] shadow-sm outline-none transition-all duration-200 focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"><option value="">—</option>{months.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                <select required value={month} onChange={(e) => setMonth(e.target.value)} autoComplete="cc-exp-month" className={`h-[50px] w-full appearance-none rounded-xl border bg-white px-4 text-center text-[15px] shadow-sm outline-none transition-all duration-200 focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)] ${expiryTouched && !expiryValid ? "border-[#c53030]" : "border-[#d1c4b5]"}`}><option value="">—</option>{months.map((m) => <option key={m} value={m}>{m}</option>)}</select>
                 <ChevronDown className="pointer-events-none absolute left-3 top-4 text-[#9a8e83]" size={16} />
               </span>
             </label>
             <label className="block">
               <span className="mb-2 block text-xs font-bold tracking-wide text-[#4a3f37]">السنة</span>
               <span className="relative block">
-                <select required value={year} onChange={(event) => setYear(event.target.value)} className="h-[50px] w-full appearance-none rounded-xl border border-[#d1c4b5] bg-white px-4 text-center text-[15px] shadow-sm outline-none transition-all duration-200 focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)]"><option value="">—</option>{years.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                <select required value={year} onChange={(e) => setYear(e.target.value)} autoComplete="cc-exp-year" className={`h-[50px] w-full appearance-none rounded-xl border bg-white px-4 text-center text-[15px] shadow-sm outline-none transition-all duration-200 focus:border-[#8d2430] focus:shadow-[0_0_0_3px_rgba(141,36,48,.12)] ${expiryTouched && !expiryValid ? "border-[#c53030]" : "border-[#d1c4b5]"}`}><option value="">—</option>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select>
                 <ChevronDown className="pointer-events-none absolute left-3 top-4 text-[#9a8e83]" size={16} />
               </span>
             </label>
           </div>
+          {expiryTouched && !expiryValid && <p className="flex items-center gap-1 text-xs text-[#c53030]"><AlertCircle size={13} /> تاريخ انتهاء البطاقة منتهي الصلاحية</p>}
         </div>
       </div>
 
