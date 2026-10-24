@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Qatar Curves — Quiet Luxury / Editorial Commerce: warm ivory canvas, charcoal structure, Qatar burgundy accents. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --primary: #252220;
+  --primary-foreground: #faf7f2;
+  --background: #f7f2ec;
+  --foreground: #252220;
+  --card: #fbf8f4;
+  --card-foreground: #252220;
+  --popover: #fbf8f4;
+  --popover-foreground: #252220;
+  --secondary: #e8ddd1;
+  --secondary-foreground: #252220;
+  --muted: #e8ddd1;
+  --muted-foreground: #746c64;
+  --accent: #8d2430;
+  --accent-foreground: #fffaf7;
+  --border: #d8cbbf;
+  --input: #d8cbbf;
+  --ring: #8d2430;
+  --radius: 0.25rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "IBM Plex Sans Arabic", sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+button, a { -webkit-tap-highlight-color: transparent; }
+button:active { transform: scale(.975); }
+::selection { background: #8d2430; color: #fffaf7; }
+
+@keyframes reveal-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes soft-zoom { from { transform: scale(1.04); } to { transform: scale(1); } }
+.reveal-up { animation: reveal-up .72s var(--ease-out) both; }
+.soft-zoom { animation: soft-zoom 1.1s var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  a { color: inherit; text-decoration: none; }
+  button, a { cursor: pointer; }
+}
+
+@layer components {
+  .container { width: 100%; margin-inline: auto; padding-inline: 1.25rem; }
+  @media (min-width: 768px) { .container { max-width: 1280px; padding-inline: 2rem; } }
+  .display-serif { font-family: "Cormorant Garamond", serif; }
+  .eyebrow { letter-spacing: .18em; text-transform: uppercase; font-size: .68rem; font-weight: 600; }
+  .pill-button { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; transition: transform .18s var(--ease-out), background .22s var(--ease-out), color .22s var(--ease-out); }
+  .pill-button:hover { transform: translateY(-2px); }
+  .product-image { transition: transform .55s var(--ease-out); }
+  .product-card:hover .product-image { transform: scale(1.045); }
+}

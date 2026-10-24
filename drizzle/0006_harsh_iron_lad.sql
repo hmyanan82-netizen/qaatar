@@ -1,0 +1,1 @@
+ALTER TABLE `paypal_payments` MODIFY COLUMN `paymentSource` enum('paypal','apple_pay','google_pay','card') NOT NULL DEFAULT 'card';
