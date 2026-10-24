@@ -123,7 +123,7 @@ function PaymentStep() {
   const createSandboxPayment = trpc.analytics.createSandboxPayment.useMutation();
   const [card, setCard] = useState(""); const [month, setMonth] = useState(""); const [year, setYear] = useState(""); const [cvv, setCvv] = useState(""); const [holder, setHolder] = useState(""); const [error, setError] = useState(() => localStorage.getItem("qatar-curves-payment-error") || ""); const [isSubmitting, setIsSubmitting] = useState(false);
   const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
-  const years = ["2026", "2027", "2028", "2029", "2030"];
+  const years = Array.from({ length: 35 }, (_, i) => String(2026 + i));
   const validCards: Record<string, "visa" | "mastercard" | "mada"> = { "4242424242424242": "visa", "5555555555554444": "mastercard", "5888450000000000": "mada" };
   useEffect(() => { localStorage.removeItem("qatar-curves-payment-error"); }, []);
 
@@ -173,10 +173,9 @@ function PaymentStep() {
     </div>
     <form onSubmit={submit} className="max-w-[680px] space-y-6">
       <div className="rounded-2xl border border-[#d1c4b5] bg-white p-6 shadow-sm sm:p-8">
-        {/* Accepted methods strip */}
-        <div className="mb-6 flex items-center justify-center gap-4 rounded-lg bg-[#f5f0eb] px-4 py-2.5">
-          <span className="text-[10px] font-bold text-[#9a8e83]">نقبل</span>
-          <VisaLogo size={36} /><MastercardLogo size={32} /><AmexLogo size={36} /><HimyanLogo size={40} />
+        {/* Accepted payment methods */}
+        <div className="mb-6 flex items-center justify-center gap-5 px-2 py-3">
+          <VisaLogo size={52} /><MastercardLogo size={44} /><AmexLogo size={52} /><HimyanLogo size={56} />
         </div>
 
         <div className="space-y-5">
