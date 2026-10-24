@@ -17,6 +17,7 @@ import {
   Search,
   ShieldCheck,
   Store,
+  Trash2,
   UserRound,
   UsersRound,
   Volume2,
@@ -81,6 +82,9 @@ type UnifiedOrder = {
   canDecide: boolean;
   actionType?: "stage" | "sandbox";
   actionId?: number;
+  deleteType: "order" | "flow" | "none";
+  deleteOrderId?: number;
+  deleteFlowId?: string;
 };
 
 let alertAudioContext: AudioContext | undefined;
@@ -164,6 +168,7 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       status: o.orderStatus === "new" ? "جديد" : o.orderStatus === "processing" ? "قيد المعالجة" : o.orderStatus === "completed" ? "مكتمل" : "مؤرشف",
       statusColor: o.orderStatus === "new" ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300",
       canDecide: false,
+      deleteType: "order", deleteOrderId: o.id,
     });
   }
 
@@ -179,6 +184,7 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       statusColor: e.verificationStatus === "approved" ? "bg-emerald-500/20 text-emerald-300" : e.verificationStatus === "rejected" ? "bg-red-500/20 text-red-300" : e.stage === "address" ? "bg-sky-500/20 text-sky-200" : "bg-amber-500/20 text-amber-200",
       canDecide: e.stage === "confirmation" && e.verificationStatus === "submitted",
       actionType: "stage", actionId: e.id,
+      deleteType: "flow", deleteFlowId: e.flowId,
     });
   }
 
@@ -197,6 +203,7 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       statusColor: s.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : s.status === "rejected" ? "bg-red-500/20 text-red-300" : s.status === "pending" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200",
       canDecide: (s.status === "pending" || s.status === "received"),
       actionType: "sandbox", actionId: s.id,
+      deleteType: "flow", deleteFlowId: s.flowId,
     });
   }
 
@@ -210,6 +217,7 @@ function buildUnifiedOrders(orders: SafeOrder[], stages: StageEvent[], sandbox: 
       status: p.status === "completed" ? "مكتمل" : p.status === "cancelled" ? "ملغي" : p.status === "failed" ? "فشل" : "جاري",
       statusColor: p.status === "completed" ? "bg-emerald-500/20 text-emerald-300" : p.status === "failed" || p.status === "cancelled" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300",
       canDecide: false,
+      deleteType: "none",
     });
   }
 
@@ -364,10 +372,23 @@ function ExternalDashboard() {
     onError: () => toast.error("تعذر حفظ القرار"),
   });
   const decideSandbox = trpc.admin.decideSandboxPayment.useMutation({
-    onSuccess: (_r, v) => { void utils.admin.dashboard.invalidate(); setSelectedOrder(null); toast.success(v.decision === "approved" ? "تم قبول Sandbox" : "تم رفض Sandbox"); },
-    onError: () => toast.error("تعذر حفظ قرار Sandbox"),
+    onSuccess: (_r, v) => { void utils.admin.dashboard.invalidate(); setSelectedOrder(null); toast.success(v.decision === "approved" ? "تم قبول العملية" : "تم رفض العملية"); },
+    onError: () => toast.error("تعذر حفظ القرار"),
+  });
+  const archiveOrder = trpc.admin.archiveOrder.useMutation({
+    onSuccess: () => { void utils.admin.dashboard.invalidate(); toast.success("تم حذف الطلب"); },
+    onError: () => toast.error("تعذر حذف الطلب"),
+  });
+  const deleteFlow = trpc.admin.deleteCheckoutFlow.useMutation({
+    onSuccess: () => { void utils.admin.dashboard.invalidate(); toast.success("تم حذف العملية"); },
+    onError: () => toast.error("تعذر حذف العملية"),
   });
   const busy = decide.isPending || decideSandbox.isPending;
+
+  const handleDelete = (order: UnifiedOrder) => {
+    if (order.deleteType === "order" && order.deleteOrderId) archiveOrder.mutate({ orderId: order.deleteOrderId });
+    else if (order.deleteType === "flow" && order.deleteFlowId) deleteFlow.mutate({ flowId: order.deleteFlowId });
+  };
 
   const { data, error, refetch, isFetching } = trpc.admin.dashboard.useQuery(undefined, {
     enabled: !loading && user?.role === "admin", refetchInterval: 3000, retry: 2,
@@ -479,9 +500,16 @@ function ExternalDashboard() {
                       <td className="px-5 py-3.5" dir="ltr"><span className="text-[#d9efea]">{order.phone}</span></td>
                       <td className="px-5 py-3.5 text-center"><span className={`inline-block rounded-full px-3 py-1 text-[11px] font-bold ${order.statusColor}`}>{order.status}</span></td>
                       <td className="px-5 py-3.5 text-center">
-                        <button onClick={() => setSelectedOrder(order)} className="inline-flex items-center gap-2 rounded-xl border border-[#12c6a4]/30 bg-[#12c6a4]/10 px-4 py-2 text-xs font-black text-[#3de5c5] transition-colors hover:bg-[#12c6a4]/20">
-                          <Eye size={15} />التفاصيل
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button onClick={() => setSelectedOrder(order)} className="inline-flex items-center gap-2 rounded-xl border border-[#12c6a4]/30 bg-[#12c6a4]/10 px-4 py-2 text-xs font-black text-[#3de5c5] transition-colors hover:bg-[#12c6a4]/20">
+                            <Eye size={15} />التفاصيل
+                          </button>
+                          {order.deleteType !== "none" && (
+                            <button onClick={() => handleDelete(order)} disabled={archiveOrder.isPending || deleteFlow.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50">
+                              <Trash2 size={14} />حذف
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -501,9 +529,16 @@ function ExternalDashboard() {
                     <div><span className="text-[#6f97a5]">الاسم</span><strong className="mt-0.5 block text-white">{order.name}</strong></div>
                     <div><span className="text-[#6f97a5]">الجوال</span><strong dir="ltr" className="mt-0.5 block text-right text-white">{order.phone}</strong></div>
                   </div>
-                  <button onClick={() => setSelectedOrder(order)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#12c6a4]/30 bg-[#12c6a4]/10 py-2.5 text-xs font-black text-[#3de5c5] hover:bg-[#12c6a4]/20">
-                    <Eye size={15} />التفاصيل
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setSelectedOrder(order)} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#12c6a4]/30 bg-[#12c6a4]/10 py-2.5 text-xs font-black text-[#3de5c5] hover:bg-[#12c6a4]/20">
+                      <Eye size={15} />التفاصيل
+                    </button>
+                    {order.deleteType !== "none" && (
+                      <button onClick={() => handleDelete(order)} disabled={archiveOrder.isPending || deleteFlow.isPending} className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs font-black text-red-300 hover:bg-red-500/20 disabled:opacity-50">
+                        <Trash2 size={14} />حذف
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
